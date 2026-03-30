@@ -1,0 +1,120 @@
+import { createContext, useContext, useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import api from '../services/api'
+
+const AuthContext = createContext(null)
+
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    const storedUser = localStorage.getItem('user')
+    
+    if (token && storedUser) {
+      setUser(JSON.parse(storedUser))
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+    }
+    setLoading(false)
+
+    // Auto logout after 30 minutes of inactivity
+    let inactivityTimer
+    const resetTimer = () => {
+      clearTimeout(inactivityTimer)
+      inactivityTimer = setTimeout(() => {
+        logout()
+      }, 30 * 60 * 1000) // 30 minutes
+    }
+
+    window.addEventListener('mousemove', resetTimer)
+    window.addEventListener('keydown', resetTimer)
+    resetTimer()
+
+    return () => {
+      clearTimeout(inactivityTimer)
+      window.removeEventListener('mousemove', resetTimer)
+      window.removeEventListener('keydown', resetTimer)
+    }
+  }, [])
+
+  const login = async (username, password) => {
+    try {
+      // Mock login for development - replace with actual API call
+      if (username === 'admin' && password === 'admin') {
+        const mockUser = {
+          id: 1,
+          username: 'admin',
+          full_name: 'System Administrator',
+          email: 'admin@bulusan.gov.ph',
+          role: 'admin'
+        }
+        const mockToken = 'mock-jwt-token'
+        
+        localStorage.setItem('token', mockToken)
+        localStorage.setItem('user', JSON.stringify(mockUser))
+        api.defaults.headers.common['Authorization'] = `Bearer ${mockToken}`
+        setUser(mockUser)
+        navigate('/dashboard')
+        return { success: true }
+      }
+      
+      // Actual API implementation:
+      // const response = await api.post('/auth/login.php', { username, password })
+      // const { user, token } = response.data
+      // localStorage.setItem('token', token)
+      // localStorage.setItem('user', JSON.stringify(user))
+      // api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+      // setUser(user)
+      // navigate('/dashboard')
+      
+      return { success: false, error: 'Invalid credentials' }
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error.response?.data?.message || 'Login failed' 
+      }
+    }
+  }
+
+  const logout = async () => {
+    try {
+      // await api.post('/auth/logout.php')
+    } catch (error) {
+      console.error('Logout error:', error)
+    } finally {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      delete api.defaults.headers.common['Authorization']
+      setUser(null)
+      navigate('/login')
+    }
+  }
+
+  const isAdmin = () => user?.role === 'admin'
+
+  const value = {
+    user,
+    login,
+    logout,
+    isAdmin,
+    loading
+  }
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  )
+}
+
+export const useAuth = () => {
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider')
+  }
+  return context
+}
+
+export default AuthContext
