@@ -30,7 +30,7 @@ const Login = () => {
           </div>
           <h1 className="text-2xl font-bold text-text-dark">Municipality of Bulusan</h1>
           <p className="text-text-light mt-1">OMTO Budget Tracker</p>
-          <p className="text-sm text-text-light mt-2">Fiscal Year 2026</p>
+          <p className="text-sm text-text-light mt-2">2026</p>
         </div>
 
         {/* Form */}
@@ -90,13 +90,6 @@ const Login = () => {
             )}
           </button>
         </form>
-
-        {/* Demo Credentials */}
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg text-sm">
-          <p className="font-medium text-text-dark mb-2">Demo Credentials:</p>
-          <p className="text-text-light">Username: <span className="font-mono">admin</span></p>
-          <p className="text-text-light">Password: <span className="font-mono">admin</span></p>
-        </div>
 
         <p className="text-center text-xs text-text-light mt-6">
           © 2026 Municipality of Bulusan. All rights reserved.

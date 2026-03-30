@@ -52,7 +52,7 @@ const Sidebar = () => {
               <h2 className="font-bold text-lg leading-tight">BULUSAN</h2>
             </div>
           </div>
-          <p className="text-xs mt-2 text-blue-200">OMTO Budget Tracker</p>
+          <p className="text-xs mt-2 text-blue-200">OMTO</p>
         </div>
 
         {/* Navigation */}

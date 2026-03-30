@@ -23,7 +23,7 @@ const Header = () => {
       {/* Left side - Breadcrumb could go here */}
       <div>
         <h2 className="text-text-light text-sm">
-          Fiscal Year: <span className="font-semibold text-text-dark">2026</span>
+          <span className="font-semibold text-text-dark">2026</span>
         </h2>
       </div>
 

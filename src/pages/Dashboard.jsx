@@ -62,8 +62,8 @@ const Dashboard = () => {
       <div className="card bg-gradient-to-r from-primary to-primary-light text-white">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-2xl font-bold">🏛️ MUNICIPALITY OF BULUSAN</h1>
-            <p className="text-blue-100 mt-1">Office of the Municipal Tourism Officer (OMTO)</p>
+            <h1 className="text-2xl font-bold">MUNICIPALITY OF BULUSAN</h1>
+            <p className="text-blue-100 mt-1">Office of the Municipal Tourism Office (OMTO)</p>
             <p className="text-blue-200 text-sm mt-2">Fiscal Year Budget Allocation & Obligation Tracker</p>
           </div>
           <div className="text-right">
