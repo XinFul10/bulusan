@@ -10,7 +10,7 @@ import {
 import { useAuth } from '../../context/AuthContext'
 
 const Header = () => {
-  const { user, logout } = useAuth()
+  const { user, logout, isAdmin } = useAuth()
   const navigate = useNavigate()
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
@@ -62,13 +62,25 @@ const Header = () => {
                 <button
                   onClick={() => {
                     setIsDropdownOpen(false)
-                    navigate('/users')
+                    navigate('/profile')
                   }}
                   className="w-full px-4 py-2 text-left text-sm text-text-dark hover:bg-gray-50 flex items-center gap-2"
                 >
                   <Cog6ToothIcon className="w-4 h-4" />
                   Profile Settings
                 </button>
+                {isAdmin() && (
+                  <button
+                    onClick={() => {
+                      setIsDropdownOpen(false)
+                      navigate('/users')
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-text-dark hover:bg-gray-50 flex items-center gap-2"
+                  >
+                    <Cog6ToothIcon className="w-4 h-4" />
+                    User Management
+                  </button>
+                )}
                 <hr className="my-1 border-gray-200" />
                 <button
                   onClick={() => {

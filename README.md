@@ -4,17 +4,25 @@
 
 ### Setup Instructions
 
-1. Install dependencies:
+1. Install frontend dependencies:
 ```bash
 npm install
 ```
 
-2. Start development server:
+2. Start the Laravel backend (in a separate terminal):
+
+```bash
+cd ../backend
+php artisan migrate:fresh --seed
+php artisan serve --host=127.0.0.1 --port=8000
+```
+
+3. Start frontend development server:
 ```bash
 npm run dev
 ```
 
-3. Build for production:
+4. Build for production:
 ```bash
 npm run build
 ```
@@ -23,7 +31,7 @@ npm run build
 
 Create a `.env` file:
 ```
-VITE_API_BASE_URL=http://localhost/api
+VITE_API_BASE_URL=http://127.0.0.1:8000/api
 VITE_APP_NAME="OMTO Budget Tracker"
 ```
 

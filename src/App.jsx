@@ -9,6 +9,7 @@ import Transactions from './pages/Transactions'
 import Tracking from './pages/Tracking'
 import Reports from './pages/Reports'
 import UserManagement from './pages/UserManagement'
+import Profile from './pages/Profile'
 
 function App() {
   useEffect(() => {
@@ -42,7 +43,8 @@ function App() {
           <Route path="transactions" element={<Transactions />} />
           <Route path="tracking" element={<Tracking />} />
           <Route path="reports" element={<Reports />} />
-          <Route path="users" element={<UserManagement />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="users" element={<ProtectedRoute adminOnly><UserManagement /></ProtectedRoute>} />
         </Route>
       </Routes>
     </AuthProvider>

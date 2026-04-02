@@ -358,16 +358,7 @@ const UserManagement = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-text-dark mb-1">
-                    Role
                   </label>
-                  <select
-                    value={formData.role}
-                    onChange={(e) => setFormData({...formData, role: e.target.value})}
-                    className="input-field"
-                  >
-                    <option value="staff">Staff</option>
-                    <option value="admin">Admin</option>
-                  </select>
                 </div>
 
                 {editingUser && (

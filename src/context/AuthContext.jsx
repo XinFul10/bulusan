@@ -41,35 +41,15 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (username, password) => {
     try {
-      // Mock login for development - replace with actual API call
-      if (username === 'admin' && password === 'admin') {
-        const mockUser = {
-          id: 1,
-          username: 'admin',
-          full_name: 'System Administrator',
-          email: 'admin@bulusan.gov.ph',
-          role: 'admin'
-        }
-        const mockToken = 'mock-jwt-token'
-        
-        localStorage.setItem('token', mockToken)
-        localStorage.setItem('user', JSON.stringify(mockUser))
-        api.defaults.headers.common['Authorization'] = `Bearer ${mockToken}`
-        setUser(mockUser)
-        navigate('/dashboard')
-        return { success: true }
-      }
-      
-      // Actual API implementation:
-      // const response = await api.post('/auth/login.php', { username, password })
-      // const { user, token } = response.data
-      // localStorage.setItem('token', token)
-      // localStorage.setItem('user', JSON.stringify(user))
-      // api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-      // setUser(user)
-      // navigate('/dashboard')
-      
-      return { success: false, error: 'Invalid credentials' }
+      const response = await api.post('/auth/login', { username, password })
+      const { user: loggedInUser, token } = response.data
+
+      localStorage.setItem('token', token)
+      localStorage.setItem('user', JSON.stringify(loggedInUser))
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+      setUser(loggedInUser)
+      navigate('/dashboard')
+      return { success: true }
     } catch (error) {
       return { 
         success: false, 
@@ -80,7 +60,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      // await api.post('/auth/logout.php')
+      await api.post('/auth/logout')
     } catch (error) {
       console.error('Logout error:', error)
     } finally {

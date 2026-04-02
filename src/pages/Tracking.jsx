@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
+import toast from 'react-hot-toast'
+import { documentService } from '../services/transactionService'
 
 const DESTINATION_OPTIONS = [
   'Office of the Mayor',
@@ -7,43 +9,9 @@ const DESTINATION_OPTIONS = [
   'Budget Office'
 ]
 
-const STORAGE_KEY = 'tracked_documents_v1'
-
-const getInitialDocuments = () => ([
-  {
-    id: 'DOC-001',
-    uploaderName: 'Maria Santos',
-    description: 'Signed budget endorsement letter (Q1)',
-    destination: 'Office of the Mayor',
-    manuallyDelivered: false
-  },
-  {
-    id: 'DOC-002',
-    uploaderName: 'Juan Dela Cruz',
-    description: 'HR clearance & appointment papers',
-    destination: 'HR',
-    manuallyDelivered: true
-  },
-  {
-    id: 'DOC-003',
-    uploaderName: 'Aileen Reyes',
-    description: 'Supplemental budget request documents',
-    destination: 'Budget Office',
-    manuallyDelivered: false
-  }
-])
-
 const Tracking = () => {
-  const [documents, setDocuments] = useState(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      if (!raw) return getInitialDocuments()
-      const parsed = JSON.parse(raw)
-      return Array.isArray(parsed) ? parsed : getInitialDocuments()
-    } catch {
-      return getInitialDocuments()
-    }
-  })
+  const [documents, setDocuments] = useState([])
+  const [loading, setLoading] = useState(true)
 
   const totalCount = documents.length
   const verifiedCount = useMemo(
@@ -52,16 +20,45 @@ const Tracking = () => {
   )
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(documents))
-    } catch {
-      // ignore persistence failures (e.g., storage disabled)
+    const load = async () => {
+      try {
+        setLoading(true)
+        const response = await documentService.getAll()
+        setDocuments(response.data || [])
+      } catch (e) {
+        toast.error('Failed to load tracked documents')
+      } finally {
+        setLoading(false)
+      }
     }
-  }, [documents])
 
-  const updateDocument = (id, patch) => {
-    setDocuments((prev) =>
-      prev.map((doc) => (doc.id === id ? { ...doc, ...patch } : doc))
+    load()
+
+    const handleRefresh = () => load()
+    window.addEventListener('refreshData', handleRefresh)
+    return () => window.removeEventListener('refreshData', handleRefresh)
+  }, [])
+
+  const updateDocument = async (id, patch) => {
+    const previous = documents
+    setDocuments((prev) => prev.map((doc) => (doc.id === id ? { ...doc, ...patch } : doc)))
+
+    try {
+      const response = await documentService.update(id, patch)
+      if (response?.data) {
+        setDocuments((prev) => prev.map((doc) => (doc.id === id ? response.data : doc)))
+      }
+    } catch (e) {
+      setDocuments(previous)
+      toast.error('Failed to update document')
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
     )
   }
 
