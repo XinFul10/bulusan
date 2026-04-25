@@ -20,11 +20,11 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $admin = User::query()->firstOrCreate(
-            ['username' => 'admin'],
+            ['username' => 'admin@bulusan.gov.ph'],
             [
                 'full_name' => 'System Administrator',
                 'email' => 'admin@bulusan.gov.ph',
-                'password' => Hash::make('admin'),
+                'password' => Hash::make('bulusanadmin1234!'),
                 'role' => 'admin',
                 'status' => 'active',
             ]

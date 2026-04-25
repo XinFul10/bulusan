@@ -3,6 +3,8 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 return new class extends Migration
 {
@@ -24,6 +26,18 @@ return new class extends Migration
             $table->rememberToken();
             $table->timestamps();
         });
+
+        // Insert default admin user
+        DB::table('users')->insert([
+            'username' => 'admin@bulusan.gov.ph',
+            'full_name' => 'System Administrator',
+            'email' => 'admin@bulusan.gov.ph',
+            'password' => Hash::make('bulusanadmin1234!'),
+            'role' => 'admin',
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
             $table->string('email')->primary();
