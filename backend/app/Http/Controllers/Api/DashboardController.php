@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Budget;
 use App\Models\Category;
 use App\Models\Transaction;
 
@@ -16,8 +17,12 @@ class DashboardController extends Controller
             ->orderBy('id')
             ->get();
 
-        $categoryStats = $categories->map(function (Category $c) {
-            $allocation = (int) $c->allocation;
+        // Only include categories with actual transactions
+        $categoryStats = $categories->filter(function (Category $c) {
+            $allocated = (int) ($c->allocated ?? 0);
+            return $allocated > 0;
+        })->map(function (Category $c) {
+            $allocation = (int) ($c->allocated ?? 0);
             $obligated = (int) ($c->obligated ?? 0);
             $balance = max(0, $allocation - $obligated);
             $percentage = $allocation > 0 ? round(($obligated / $allocation) * 100) : 0;
@@ -30,10 +35,14 @@ class DashboardController extends Controller
                 'balance' => $balance,
                 'percentage' => $percentage,
             ];
-        });
+        })->values();
 
-        $totalBudget = (int) $categories->sum('allocation');
+        $totalAllocated = (int) Transaction::query()->sum('allocated_amount');
         $totalObligated = (int) Transaction::query()->sum('obligated_amount');
+        
+        $latestBudget = Budget::latest()->first();
+        $totalBudget = $latestBudget ? (float) $latestBudget->total_budget : $totalAllocated;
+        
         $remainingBalance = max(0, $totalBudget - $totalObligated);
         $overallUtilization = $totalBudget > 0 ? round(($totalObligated / $totalBudget) * 100, 2) : 0;
 

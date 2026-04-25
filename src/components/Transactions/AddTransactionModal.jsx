@@ -16,7 +16,14 @@ const abTests = ['T1', 'T2', 'T3', 'None']
 const AddTransactionModal = ({ isOpen, onClose, onSuccess, editData = null }) => {
   const [loading, setLoading] = useState(false)
   const { register, handleSubmit, watch, reset, formState: { errors } } = useForm({
-    defaultValues: editData || {
+    defaultValues: editData ? {
+      date: editData.transaction_date,
+      description: editData.description,
+      category_id: editData.category_id.toString(),
+      a_b_test: editData.a_b_test || 'None',
+      allocated_amount: editData.allocated_amount,
+      obligated_amount: editData.obligated_amount
+    } : {
       date: new Date().toISOString().split('T')[0],
       category_id: '',
       a_b_test: 'None',
@@ -33,9 +40,12 @@ const AddTransactionModal = ({ isOpen, onClose, onSuccess, editData = null }) =>
     try {
       setLoading(true)
       const payload = {
-        ...data,
-        allocated_amount: parseFloat(data.allocated_amount),
-        obligated_amount: parseFloat(data.obligated_amount)
+        transaction_date: data.date,
+        description: data.description,
+        category_id: parseInt(data.category_id),
+        a_b_test: data.a_b_test || null,
+        allocated_amount: parseInt(data.allocated_amount) || 0,
+        obligated_amount: parseInt(data.obligated_amount) || 0
       }
 
       if (editData) {
@@ -50,7 +60,7 @@ const AddTransactionModal = ({ isOpen, onClose, onSuccess, editData = null }) =>
       onSuccess?.()
       onClose()
     } catch (error) {
-      toast.error(error.message || 'Failed to save transaction')
+      toast.error(error.response?.data?.message || error.message || 'Failed to save transaction')
     } finally {
       setLoading(false)
     }

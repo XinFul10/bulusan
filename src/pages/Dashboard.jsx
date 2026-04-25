@@ -4,13 +4,17 @@ import BudgetCard from '../components/Dashboard/BudgetCard'
 import BudgetBarChart from '../components/Dashboard/BudgetBarChart'
 import BudgetPieChart from '../components/Dashboard/BudgetPieChart'
 import AddTransactionModal from '../components/Transactions/AddTransactionModal'
+import SetBudgetModal from '../components/Dashboard/SetBudgetModal'
 import { dashboardService } from '../services/transactionService'
+import { useAuth } from '../context/AuthContext'
 import toast from 'react-hot-toast'
 
 const Dashboard = () => {
+  const { isAdmin } = useAuth()
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false)
 
   const fetchStats = useCallback(async () => {
     try {
@@ -56,6 +60,10 @@ const Dashboard = () => {
     )
   }
 
+  // Filter categories with actual data (allocation > 0)
+  const categoriesWithData = stats?.categories?.filter(cat => cat.allocation > 0) || []
+  const hasData = categoriesWithData.length > 0
+
   return (
     <div className="space-y-6">
       {/* Header Section */}
@@ -74,10 +82,18 @@ const Dashboard = () => {
       </div>
 
       {/* Quick Action Button */}
-      <div className="flex justify-end">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
+        {isAdmin() && (
+          <button
+            onClick={() => setIsBudgetModalOpen(true)}
+            className="btn-secondary flex items-center justify-center gap-2"
+          >
+            Set Total Budget
+          </button>
+        )}
         <button
           onClick={() => setIsModalOpen(true)}
-          className="btn-primary flex items-center gap-2"
+          className="btn-primary flex items-center justify-center gap-2"
         >
           <PlusIcon className="w-5 h-5" />
           New Transaction
@@ -105,27 +121,38 @@ const Dashboard = () => {
       </div>
 
       {/* Budget Category Cards */}
-      <div>
-        <h2 className="text-xl font-semibold text-text-dark mb-4">Budget by Category</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-          {stats?.categories?.map((category) => (
-            <BudgetCard
-              key={category.id}
-              category={category.name}
-              allocation={category.allocation}
-              obligated={category.obligated}
-              balance={category.balance}
-              percentage={category.percentage}
-            />
-          ))}
+      {hasData ? (
+        <div>
+          <h2 className="text-xl font-semibold text-text-dark mb-4">Budget by Category</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+            {categoriesWithData.map((category) => (
+              <BudgetCard
+                key={category.id}
+                category={category.name}
+                allocation={category.allocation}
+                obligated={category.obligated}
+                balance={category.balance}
+                percentage={category.percentage}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="card bg-gray-50 border-2 border-dashed border-gray-300">
+          <div className="text-center py-12">
+            <p className="text-text-light text-lg">No data available</p>
+            <p className="text-text-light text-sm mt-1">Set a budget and create transactions to see data here</p>
+          </div>
+        </div>
+      )}
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <BudgetBarChart data={stats?.categories} />
-        <BudgetPieChart data={stats?.categories} />
-      </div>
+      {hasData && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <BudgetBarChart data={categoriesWithData} />
+          <BudgetPieChart data={categoriesWithData} />
+        </div>
+      )}
 
       {/* Add Transaction Modal */}
       <AddTransactionModal
@@ -134,6 +161,16 @@ const Dashboard = () => {
         onSuccess={() => {
           fetchStats()
           toast.success('Transaction added successfully')
+        }}
+      />
+
+      {/* Set Budget Modal */}
+      <SetBudgetModal
+        isOpen={isBudgetModalOpen}
+        onClose={() => setIsBudgetModalOpen(false)}
+        onSuccess={() => {
+          fetchStats()
+          toast.success('Budget updated successfully')
         }}
       />
     </div>

@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\MeController;
 use App\Http\Controllers\Api\TransactionController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\BudgetController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', fn () => response()->json(['ok' => true]));
@@ -32,3 +33,6 @@ Route::delete('/users/{user}', [UserController::class, 'destroy'])->middleware('
 Route::get('/documents', [DocumentController::class, 'index'])->middleware('auth:sanctum');
 Route::post('/documents', [DocumentController::class, 'store'])->middleware('auth:sanctum');
 Route::put('/documents/{document}', [DocumentController::class, 'update'])->middleware('auth:sanctum');
+
+Route::post('/budget', [BudgetController::class, 'setBudget'])->middleware('auth:sanctum');
+Route::get('/budget', [BudgetController::class, 'getCurrentBudget'])->middleware('auth:sanctum');

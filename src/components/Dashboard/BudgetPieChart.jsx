@@ -8,6 +8,19 @@ const BudgetPieChart = ({ data }) => {
     value: item.allocation
   })) || []
 
+  if (!chartData || chartData.length === 0) {
+    return (
+      <div className="card">
+        <h3 className="text-lg font-semibold text-text-dark mb-4">Budget Allocation Distribution</h3>
+        <div className="h-80 flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+          <div className="text-center">
+            <p className="text-text-light">No data available</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('en-PH', {
       style: 'currency',
