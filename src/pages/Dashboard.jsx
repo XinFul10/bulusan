@@ -146,6 +146,47 @@ const Dashboard = () => {
         </div>
       )}
 
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-text-dark">Recent Transactions</h2>
+          <span className="text-sm text-text-light">Latest 5 entries</span>
+        </div>
+        <div className="card overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr>
+                <th className="table-header">Date</th>
+                <th className="table-header">Description</th>
+                <th className="table-header">Category</th>
+                <th className="table-header">Created By</th>
+                <th className="table-header text-right">Allocated</th>
+                <th className="table-header text-right">Obligated</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {(stats?.recent_transactions || []).length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="text-center py-8 text-text-light">
+                    No recent transactions yet.
+                  </td>
+                </tr>
+              ) : (
+                stats.recent_transactions.map((transaction) => (
+                  <tr key={transaction.id} className="hover:bg-gray-50">
+                    <td className="table-cell">{transaction.transaction_date}</td>
+                    <td className="table-cell">{transaction.description}</td>
+                    <td className="table-cell">{transaction.category_name || '-'}</td>
+                    <td className="table-cell">{transaction.creator_name || 'Unknown'}</td>
+                    <td className="table-cell text-right">{formatCurrency(transaction.allocated_amount)}</td>
+                    <td className="table-cell text-right">{formatCurrency(transaction.obligated_amount)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* Charts Section */}
       {hasData && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

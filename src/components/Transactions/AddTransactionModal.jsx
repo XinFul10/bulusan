@@ -4,35 +4,38 @@ import { XMarkIcon } from '@heroicons/react/24/outline'
 import { transactionService, dashboardService } from '../../services/transactionService'
 import toast from 'react-hot-toast'
 
-const categories = [
+const abTests = ['T1', 'T2', 'T3', 'None']
+const defaultCategories = [
   { id: 1, name: 'Capacity Development' },
   { id: 2, name: 'TM & Promotions' },
   { id: 3, name: 'Socio-Cultural & Eco' },
   { id: 4, name: 'Product & Market Dev' }
 ]
 
-const abTests = ['T1', 'T2', 'T3', 'None']
-
 const AddTransactionModal = ({ isOpen, onClose, onSuccess, editData = null }) => {
   const [loading, setLoading] = useState(false)
+  const [categories, setCategories] = useState(defaultCategories)
   const [budgetInfo, setBudgetInfo] = useState({ total_budget: null, remaining_balance: null })
   const { register, handleSubmit, watch, reset, formState: { errors } } = useForm({
     defaultValues: editData ? {
       date: editData.transaction_date,
       description: editData.description,
-      category_id: editData.category_id.toString(),
+      category_id: editData.category_id ? editData.category_id.toString() : '',
+      custom_category: '',
       a_b_test: editData.a_b_test || 'None',
       allocated_amount: editData.allocated_amount,
       obligated_amount: editData.obligated_amount
     } : {
       date: new Date().toISOString().split('T')[0],
       category_id: '',
+      custom_category: '',
       a_b_test: 'None',
       allocated_amount: '',
       obligated_amount: ''
     }
   })
 
+  const customCategory = watch('custom_category')
   const allocated = Number(watch('allocated_amount') || 0)
   const obligated = Number(watch('obligated_amount') || 0)
   const balance = allocated - obligated
@@ -53,7 +56,17 @@ const AddTransactionModal = ({ isOpen, onClose, onSuccess, editData = null }) =>
       }
     }
 
+    const loadCategories = async () => {
+      try {
+        const response = await transactionService.getCategories()
+        setCategories(response.data?.data?.length ? response.data.data : defaultCategories)
+      } catch (error) {
+        setCategories(defaultCategories)
+      }
+    }
+
     loadBudgetInfo()
+    loadCategories()
   }, [isOpen])
 
   const onSubmit = async (data) => {
@@ -62,7 +75,8 @@ const AddTransactionModal = ({ isOpen, onClose, onSuccess, editData = null }) =>
       const payload = {
         transaction_date: data.date,
         description: data.description,
-        category_id: parseInt(data.category_id),
+        category_id: data.category_id ? parseInt(data.category_id) : null,
+        custom_category: data.custom_category || null,
         a_b_test: data.a_b_test || null,
         allocated_amount: Number(data.allocated_amount) || 0,
         obligated_amount: Number(data.obligated_amount) || 0
@@ -158,7 +172,17 @@ const AddTransactionModal = ({ isOpen, onClose, onSuccess, editData = null }) =>
               Category <span className="text-danger">*</span>
             </label>
             <select
-              {...register('category_id', { required: 'Category is required' })}
+              {...register('category_id', {
+                validate: value => {
+                  if (value && customCategory) {
+                    return 'Please choose either a preset category or a custom category, not both.'
+                  }
+                  if (!value && !customCategory) {
+                    return 'Category or custom category is required'
+                  }
+                  return true
+                }
+              })}
               className="input-field"
             >
               <option value="">Select category</option>
@@ -171,6 +195,29 @@ const AddTransactionModal = ({ isOpen, onClose, onSuccess, editData = null }) =>
             )}
           </div>
 
+          {/* Custom Category */}
+          <div>
+            <label className="block text-sm font-medium text-text-dark mb-1">
+              Custom Category
+            </label>
+            <input
+              type="text"
+              placeholder="Optional: add a new category"
+              {...register('custom_category', {
+                validate: value => {
+                  if (value && watch('category_id')) {
+                    return 'Please choose either a preset category or a custom category, not both.'
+                  }
+                  return true
+                }
+              })}
+              className="input-field"
+            />
+            {errors.custom_category && (
+              <p className="text-danger text-sm mt-1">{errors.custom_category.message}</p>
+            )}
+          </div>
+
           {/* A/B Test */}
           <div>
             <label className="block text-sm font-medium text-text-dark mb-1">
@@ -178,7 +225,7 @@ const AddTransactionModal = ({ isOpen, onClose, onSuccess, editData = null }) =>
             </label>
             <select {...register('a_b_test')} className="input-field">
               {abTests.map(test => (
-                <option key={test} value={test === 'None' ? null : test}>{test}</option>
+                <option key={test} value={test === 'None' ? '' : test}>{test}</option>
               ))}
             </select>
           </div>

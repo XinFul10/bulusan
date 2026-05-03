@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Budget;
 use App\Models\Category;
 use App\Models\Transaction;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
@@ -46,6 +47,25 @@ class DashboardController extends Controller
         $remainingBalance = max(0, $totalBudget - $totalObligated);
         $overallUtilization = $totalBudget > 0 ? round(($totalObligated / $totalBudget) * 100, 2) : 0;
 
+        $recentTransactions = Transaction::query()
+            ->with(['creator:id,full_name', 'category:id,name'])
+            ->orderByDesc('transaction_date')
+            ->orderByDesc('id')
+            ->limit(5)
+            ->get()
+            ->map(function (Transaction $t) {
+                return [
+                    'id' => $t->id,
+                    'transaction_date' => Carbon::parse($t->transaction_date)->toDateString(),
+                    'description' => $t->description,
+                    'category_name' => $t->category?->name,
+                    'creator_name' => $t->creator?->full_name,
+                    'allocated_amount' => (int) $t->allocated_amount,
+                    'obligated_amount' => (int) $t->obligated_amount,
+                    'balance' => (int) max(0, ((int) $t->allocated_amount) - ((int) $t->obligated_amount)),
+                ];
+            });
+
         return response()->json([
             'data' => [
                 'categories' => $categoryStats,
@@ -53,6 +73,7 @@ class DashboardController extends Controller
                 'total_obligated' => $totalObligated,
                 'remaining_balance' => $remainingBalance,
                 'overall_utilization' => $overallUtilization,
+                'recent_transactions' => $recentTransactions,
             ],
         ]);
     }

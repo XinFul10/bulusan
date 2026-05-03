@@ -7,6 +7,11 @@ export const transactionService = {
     return response.data
   },
 
+  getCategories: async () => {
+    const response = await api.get('/categories')
+    return response.data
+  },
+
   create: async (data) => {
     const response = await api.post('/transactions', data)
     return response.data

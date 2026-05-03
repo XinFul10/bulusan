@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Budget;
+use App\Models\Category;
 use App\Models\Transaction;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
@@ -13,17 +15,18 @@ class TransactionController extends Controller
     public function index()
     {
         $transactions = Transaction::query()
-            ->with('category:id,name')
+            ->with(['category:id,name', 'creator:id,full_name'])
             ->orderByDesc('transaction_date')
             ->orderByDesc('id')
             ->get();
 
         $data = $transactions->map(fn (Transaction $t) => [
             'id' => $t->id,
-            'transaction_date' => $t->transaction_date->toDateString(),
+            'transaction_date' => Carbon::parse($t->transaction_date)->toDateString(),
             'description' => $t->description,
             'category_id' => $t->category_id,
             'category_name' => $t->category?->name,
+            'creator_name' => $t->creator?->full_name,
             'a_b_test' => $t->a_b_test,
             'allocated_amount' => (int) $t->allocated_amount,
             'obligated_amount' => (int) $t->obligated_amount,
@@ -83,8 +86,14 @@ class TransactionController extends Controller
 
     protected function authorizeTransactionDelete(Request $request, Transaction $transaction): void
     {
-        if ($request->user()->role !== 'admin') {
-            abort(403, 'Only admins may delete transactions.');
+        $user = $request->user();
+
+        if ($user->role === 'admin') {
+            return;
+        }
+
+        if ($transaction->created_by !== $user->id) {
+            abort(403, 'You may only delete transactions you created.');
         }
     }
 
@@ -93,27 +102,47 @@ class TransactionController extends Controller
         $data = $request->validate([
             'transaction_date' => ['required', 'date'],
             'description' => ['required', 'string', 'max:255'],
-            'category_id' => ['required', 'integer', 'exists:categories,id'],
+            'category_id' => ['nullable', 'integer', 'exists:categories,id', 'required_without:custom_category'],
+            'custom_category' => ['nullable', 'string', 'max:255', 'required_without:category_id'],
             'a_b_test' => ['nullable', 'string', 'max:50'],
             'allocated_amount' => ['required', 'integer', 'min:0'],
             'obligated_amount' => ['nullable', 'integer', 'min:0'],
         ]);
 
+        if (! empty($data['category_id']) && ! empty($data['custom_category'])) {
+            throw new HttpResponseException(response()->json([
+                'message' => 'Please choose either a preset category or a custom category, not both.',
+            ], 422));
+        }
+
         $data['obligated_amount'] = $data['obligated_amount'] ?? 0;
+
+        if (! empty($data['custom_category']) && empty($data['category_id'])) {
+            $category = Category::firstOrCreate(
+                ['name' => trim($data['custom_category'])],
+                ['allocation' => 0]
+            );
+            $data['category_id'] = $category->id;
+        }
+
+        $data['category_id'] = $data['category_id'] ?? null;
+        unset($data['custom_category']);
+
         $this->ensureWithinBudget($data);
 
         $transaction = Transaction::create([
             ...$data,
             'created_by' => $request->user()->id,
-        ])->load('category:id,name');
+        ])->load(['category:id,name', 'creator:id,full_name']);
 
         return response()->json([
             'data' => [
                 'id' => $transaction->id,
-                'transaction_date' => $transaction->transaction_date->toDateString(),
+                'transaction_date' => Carbon::parse($transaction->transaction_date)->toDateString(),
                 'description' => $transaction->description,
                 'category_id' => $transaction->category_id,
                 'category_name' => $transaction->category?->name,
+                'creator_name' => $transaction->creator?->full_name,
                 'a_b_test' => $transaction->a_b_test,
                 'allocated_amount' => (int) $transaction->allocated_amount,
                 'obligated_amount' => (int) $transaction->obligated_amount,
@@ -129,14 +158,33 @@ class TransactionController extends Controller
         $data = $request->validate([
             'transaction_date' => ['sometimes', 'date'],
             'description' => ['sometimes', 'string', 'max:255'],
-            'category_id' => ['sometimes', 'integer', 'exists:categories,id'],
+            'category_id' => ['sometimes', 'nullable', 'integer', 'exists:categories,id', 'required_without:custom_category'],
+            'custom_category' => ['sometimes', 'nullable', 'string', 'max:255', 'required_without:category_id'],
             'a_b_test' => ['nullable', 'string', 'max:50'],
             'allocated_amount' => ['sometimes', 'integer', 'min:0'],
             'obligated_amount' => ['sometimes', 'integer', 'min:0'],
         ]);
 
+        if (! empty($data['category_id']) && ! empty($data['custom_category'])) {
+            throw new HttpResponseException(response()->json([
+                'message' => 'Please choose either a preset category or a custom category, not both.',
+            ], 422));
+        }
+
         if (array_key_exists('obligated_amount', $data) && $data['obligated_amount'] === null) {
             $data['obligated_amount'] = 0;
+        }
+
+        if (! empty($data['custom_category']) && empty($data['category_id'])) {
+            $category = Category::firstOrCreate(
+                ['name' => trim($data['custom_category'])],
+                ['allocation' => 0]
+            );
+            $data['category_id'] = $category->id;
+        }
+
+        if (array_key_exists('custom_category', $data)) {
+            unset($data['custom_category']);
         }
 
         $this->authorizeTransactionUpdate($request, $transaction);
@@ -146,15 +194,16 @@ class TransactionController extends Controller
         ], $data), $transaction);
 
         $transaction->fill($data)->save();
-        $transaction->load('category:id,name');
+        $transaction->load(['category:id,name', 'creator:id,full_name']);
 
         return response()->json([
             'data' => [
                 'id' => $transaction->id,
-                'transaction_date' => $transaction->transaction_date->toDateString(),
+                'transaction_date' => Carbon::parse($transaction->transaction_date)->toDateString(),
                 'description' => $transaction->description,
                 'category_id' => $transaction->category_id,
                 'category_name' => $transaction->category?->name,
+                'creator_name' => $transaction->creator?->full_name,
                 'a_b_test' => $transaction->a_b_test,
                 'allocated_amount' => (int) $transaction->allocated_amount,
                 'obligated_amount' => (int) $transaction->obligated_amount,

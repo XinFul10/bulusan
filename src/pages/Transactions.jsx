@@ -3,10 +3,8 @@ import { useAuth } from '../context/AuthContext'
 import { 
   PlusIcon, 
   MagnifyingGlassIcon,
-  FunnelIcon,
   ArrowDownTrayIcon,
   PencilIcon,
-  EyeIcon,
   TrashIcon,
   ChevronLeftIcon,
   ChevronRightIcon
@@ -19,7 +17,7 @@ import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
 import 'jspdf-autotable'
 
-const categories = [
+const defaultCategories = [
   { id: '', name: 'All Categories' },
   { id: 1, name: 'Capacity Development' },
   { id: 2, name: 'TM & Promotions' },
@@ -37,6 +35,7 @@ const statusOptions = [
 const Transactions = () => {
   const [transactions, setTransactions] = useState([])
   const [filteredTransactions, setFilteredTransactions] = useState([])
+  const [categories, setCategories] = useState(defaultCategories)
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editData, setEditData] = useState(null)
@@ -54,11 +53,16 @@ const Transactions = () => {
   const fetchTransactions = useCallback(async () => {
     try {
       setLoading(true)
-      const response = await transactionService.getAll()
-      setTransactions(response.data)
-      setFilteredTransactions(response.data)
+      const [transactionsResponse, categoriesResponse] = await Promise.all([
+        transactionService.getAll(),
+        transactionService.getCategories()
+      ])
+      setTransactions(transactionsResponse.data)
+      setFilteredTransactions(transactionsResponse.data)
+      setCategories([{ id: '', name: 'All Categories' }, ...(categoriesResponse.data?.data?.length ? categoriesResponse.data.data : defaultCategories.slice(1))])
     } catch (error) {
       toast.error('Failed to load transactions')
+      setCategories(defaultCategories)
     } finally {
       setLoading(false)
     }
@@ -309,6 +313,7 @@ const Transactions = () => {
             <tr>
               <th className="table-header">Date</th>
               <th className="table-header">Description</th>
+              <th className="table-header">Created By</th>
               <th className="table-header">Category</th>
               <th className="table-header">A/B Test</th>
               <th className="table-header text-right">Allocated</th>
@@ -340,6 +345,7 @@ const Transactions = () => {
                       {format(new Date(transaction.transaction_date), 'MMM dd, yy')}
                     </td>
                     <td className="table-cell">{transaction.description}</td>
+                    <td className="table-cell">{transaction.creator_name || 'Unknown'}</td>
                     <td className="table-cell">{transaction.category_name}</td>
                     <td className="table-cell">
                       <span className="px-2 py-1 bg-gray-100 rounded text-xs">
@@ -371,7 +377,7 @@ const Transactions = () => {
                             <PencilIcon className="w-4 h-4" />
                           </button>
                         )}
-                        {isAdmin() && (
+                        {(isAdmin() || transaction.created_by === user?.id) && (
                           <button
                             onClick={() => handleDelete(transaction.id)}
                             className="p-1 text-danger hover:bg-danger/10 rounded"

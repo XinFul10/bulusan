@@ -25,6 +25,8 @@ Route::post('/transactions', [TransactionController::class, 'store'])->middlewar
 Route::put('/transactions/{transaction}', [TransactionController::class, 'update'])->middleware('auth:sanctum');
 Route::delete('/transactions/{transaction}', [TransactionController::class, 'destroy'])->middleware('auth:sanctum');
 
+Route::get('/categories', [\App\Http\Controllers\Api\CategoryController::class, 'index'])->middleware('auth:sanctum');
+
 Route::get('/users', [UserController::class, 'index'])->middleware('auth:sanctum');
 Route::post('/users', [UserController::class, 'store'])->middleware('auth:sanctum');
 Route::put('/users/{user}', [UserController::class, 'update'])->middleware('auth:sanctum');
