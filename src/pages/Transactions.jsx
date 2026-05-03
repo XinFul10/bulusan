@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '../context/AuthContext'
 import { 
   PlusIcon, 
   MagnifyingGlassIcon,
@@ -41,6 +42,7 @@ const Transactions = () => {
   const [editData, setEditData] = useState(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const { user, isAdmin } = useAuth()
   
   // Filters
   const [searchTerm, setSearchTerm] = useState('')
@@ -360,20 +362,24 @@ const Transactions = () => {
                     </td>
                     <td className="table-cell">
                       <div className="flex justify-center gap-2">
-                        <button
-                          onClick={() => handleEdit(transaction)}
-                          className="p-1 text-primary hover:bg-primary/10 rounded"
-                          title="Edit"
-                        >
-                          <PencilIcon className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(transaction.id)}
-                          className="p-1 text-danger hover:bg-danger/10 rounded"
-                          title="Delete"
-                        >
-                          <TrashIcon className="w-4 h-4" />
-                        </button>
+                        {(isAdmin() || transaction.created_by === user?.id) && (
+                          <button
+                            onClick={() => handleEdit(transaction)}
+                            className="p-1 text-primary hover:bg-primary/10 rounded"
+                            title="Edit"
+                          >
+                            <PencilIcon className="w-4 h-4" />
+                          </button>
+                        )}
+                        {isAdmin() && (
+                          <button
+                            onClick={() => handleDelete(transaction.id)}
+                            className="p-1 text-danger hover:bg-danger/10 rounded"
+                            title="Delete"
+                          >
+                            <TrashIcon className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

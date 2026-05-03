@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { XMarkIcon } from '@heroicons/react/24/outline'
-import { transactionService } from '../../services/transactionService'
+import { transactionService, dashboardService } from '../../services/transactionService'
 import toast from 'react-hot-toast'
 
 const categories = [
@@ -15,6 +15,7 @@ const abTests = ['T1', 'T2', 'T3', 'None']
 
 const AddTransactionModal = ({ isOpen, onClose, onSuccess, editData = null }) => {
   const [loading, setLoading] = useState(false)
+  const [budgetInfo, setBudgetInfo] = useState({ total_budget: null, remaining_balance: null })
   const { register, handleSubmit, watch, reset, formState: { errors } } = useForm({
     defaultValues: editData ? {
       date: editData.transaction_date,
@@ -32,9 +33,28 @@ const AddTransactionModal = ({ isOpen, onClose, onSuccess, editData = null }) =>
     }
   })
 
-  const allocated = watch('allocated_amount') || 0
-  const obligated = watch('obligated_amount') || 0
+  const allocated = Number(watch('allocated_amount') || 0)
+  const obligated = Number(watch('obligated_amount') || 0)
   const balance = allocated - obligated
+  const budgetTotal = budgetInfo.total_budget
+  const budgetRemaining = budgetInfo.remaining_balance
+
+  useEffect(() => {
+    if (!isOpen) {
+      return
+    }
+
+    const loadBudgetInfo = async () => {
+      try {
+        const response = await dashboardService.getStats()
+        setBudgetInfo(response.data)
+      } catch (error) {
+        setBudgetInfo({ total_budget: null, remaining_balance: null })
+      }
+    }
+
+    loadBudgetInfo()
+  }, [isOpen])
 
   const onSubmit = async (data) => {
     try {
@@ -44,8 +64,8 @@ const AddTransactionModal = ({ isOpen, onClose, onSuccess, editData = null }) =>
         description: data.description,
         category_id: parseInt(data.category_id),
         a_b_test: data.a_b_test || null,
-        allocated_amount: parseInt(data.allocated_amount) || 0,
-        obligated_amount: parseInt(data.obligated_amount) || 0
+        allocated_amount: Number(data.allocated_amount) || 0,
+        obligated_amount: Number(data.obligated_amount) || 0
       }
 
       if (editData) {
@@ -176,7 +196,14 @@ const AddTransactionModal = ({ isOpen, onClose, onSuccess, editData = null }) =>
                 placeholder="0.00"
                 {...register('allocated_amount', { 
                   required: 'Amount is required',
-                  min: { value: 0, message: 'Must be positive' }
+                  min: { value: 0, message: 'Must be positive' },
+                  validate: value => {
+                    const amount = Number(value)
+                    if (budgetTotal !== null && amount > budgetTotal) {
+                      return `Allocated amount cannot exceed total budget of ₱${budgetTotal.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`
+                    }
+                    return true
+                  }
                 })}
                 className="input-field"
               />
@@ -193,9 +220,21 @@ const AddTransactionModal = ({ isOpen, onClose, onSuccess, editData = null }) =>
                 step="0.01"
                 min="0"
                 placeholder="0.00"
-                {...register('obligated_amount')}
+                {...register('obligated_amount', {
+                  validate: value => {
+                    if (!value) return true
+                    const amount = Number(value)
+                    if (budgetRemaining !== null && amount > budgetRemaining) {
+                      return `Obligated amount cannot exceed remaining budget of ₱${budgetRemaining.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`
+                    }
+                    return true
+                  }
+                })}
                 className="input-field"
               />
+              {errors.obligated_amount && (
+                <p className="text-danger text-sm mt-1">{errors.obligated_amount.message}</p>
+              )}
             </div>
           </div>
 
@@ -204,6 +243,11 @@ const AddTransactionModal = ({ isOpen, onClose, onSuccess, editData = null }) =>
             <p className="text-sm text-text-light">Calculated Balance</p>
             <p className={`text-xl font-bold ${balance >= 0 ? 'text-success' : 'text-danger'}`}>
               ₱{balance.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+            </p>
+            <p className="text-xs text-text-light mt-2">
+              {budgetRemaining !== null
+                ? `Remaining budget: ₱${budgetRemaining.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`
+                : 'No budget is set yet.'}
             </p>
           </div>
 
