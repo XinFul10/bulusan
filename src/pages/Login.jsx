@@ -12,10 +12,12 @@ const Login = () => {
 
   const onSubmit = async (data) => {
     setLoading(true)
+    console.log('Attempting login with:', data.username)
     const result = await login(data.username, data.password)
     setLoading(false)
     
     if (!result.success) {
+      console.error('Login failed:', result.error)
       toast.error(result.error || 'Login failed')
     }
   }
@@ -42,6 +44,9 @@ const Login = () => {
             <input
               type="text"
               placeholder="Enter your username"
+              autoComplete="off"
+              readOnly
+              onFocus={(e) => e.target.removeAttribute('readOnly')}
               {...register('username', { required: 'Username is required' })}
               className="input-field"
             />
@@ -58,6 +63,9 @@ const Login = () => {
               <input
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Enter your password"
+                autoComplete="new-password"
+                readOnly
+                onFocus={(e) => e.target.removeAttribute('readOnly')}
                 {...register('password', { required: 'Password is required' })}
                 className="input-field pr-10"
               />

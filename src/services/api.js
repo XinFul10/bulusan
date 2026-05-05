@@ -32,6 +32,15 @@ api.interceptors.response.use(
       localStorage.removeItem('user')
       window.location.href = '/login'
     }
+    // Extract proper error message from API response
+    if (error.response?.data?.message) {
+      error.message = error.response.data.message
+    } else if (error.response?.data?.errors) {
+      // Laravel validation errors - join all error messages
+      const errors = error.response.data.errors
+      const messages = Object.values(errors).flat().join(', ')
+      error.message = messages
+    }
     return Promise.reject(error)
   }
 )

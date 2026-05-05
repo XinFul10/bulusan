@@ -5,12 +5,8 @@ return [
 
     'allowed_methods' => ['*'],
 
-    // Comma-separated list in .env, e.g.:
-    // FRONTEND_URLS=http://localhost:3000,http://localhost:3001,http://localhost:5173
-    'allowed_origins' => array_values(array_filter(array_map(
-        'trim',
-        explode(',', env('FRONTEND_URLS', env('FRONTEND_URL', 'http://localhost:3000')))
-    ))),
+    // Allow all origins for development - restrict in production
+    'allowed_origins' => ['*'],
 
     'allowed_origins_patterns' => [],
 

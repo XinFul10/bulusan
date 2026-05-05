@@ -10,14 +10,26 @@ export const AuthProvider = ({ children }) => {
   const navigate = useNavigate()
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    const storedUser = localStorage.getItem('user')
-    
-    if (token && storedUser) {
-      setUser(JSON.parse(storedUser))
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+    try {
+      const token = localStorage.getItem('token')
+      const storedUser = localStorage.getItem('user')
+      
+      if (token && storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser)
+          setUser(parsedUser)
+          api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+        } catch (parseError) {
+          console.error('Failed to parse stored user:', parseError)
+          localStorage.removeItem('token')
+          localStorage.removeItem('user')
+        }
+      }
+    } catch (e) {
+      console.error('Auth init error:', e)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
 
     // Auto logout after 30 minutes of inactivity
     let inactivityTimer
@@ -51,9 +63,13 @@ export const AuthProvider = ({ children }) => {
       navigate('/dashboard')
       return { success: true }
     } catch (error) {
+      console.error('Login error details:', error)
+      const errorMsg = error.response?.data?.message 
+        || error.message 
+        || 'Login failed'
       return { 
         success: false, 
-        error: error.response?.data?.message || 'Login failed' 
+        error: errorMsg
       }
     }
   }

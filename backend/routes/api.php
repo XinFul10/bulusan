@@ -6,10 +6,15 @@ use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\MeController;
 use App\Http\Controllers\Api\TransactionController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\BudgetController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', fn () => response()->json(['ok' => true]));
+
+Route::get('/reports', [ReportController::class, 'index'])->middleware('auth:sanctum');
+Route::post('/reports', [ReportController::class, 'store'])->middleware('auth:sanctum');
+Route::delete('/reports/{report}', [ReportController::class, 'destroy'])->middleware('auth:sanctum');
 
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/auth/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');

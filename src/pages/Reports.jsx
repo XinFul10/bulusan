@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { DocumentArrowDownIcon, PrinterIcon, EyeIcon, TrashIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
 import { format } from 'date-fns'
@@ -6,6 +6,7 @@ import jsPDF from 'jspdf'
 import 'jspdf-autotable'
 import * as XLSX from 'xlsx'
 import toast from 'react-hot-toast'
+import { reportService } from '../services/transactionService'
 
 const reportTypes = [
   { value: 'budget_summary', label: 'Budget Summary' },
@@ -56,6 +57,36 @@ const Reports = () => {
   const [generatedReports, setGeneratedReports] = useState([])
   const [previewData, setPreviewData] = useState(null)
   const [generating, setGenerating] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  // Fetch reports on load
+  useEffect(() => {
+    fetchReports()
+  }, [])
+
+  const fetchReports = async () => {
+    try {
+      setLoading(true)
+      const response = await reportService.getAll()
+      // Transform API response (snake_case) to frontend format (camelCase)
+      const transformedReports = (response.data || []).map(report => ({
+        id: report.id,
+        type: report.type,
+        typeLabel: report.type_label,
+        dateFrom: report.date_from,
+        dateTo: report.date_to,
+        category: report.category,
+        data: report.data,
+        generatedAt: report.generated_at,
+        createdBy: report.created_by // Transform snake_case to camelCase
+      }))
+      setGeneratedReports(transformedReports)
+    } catch (error) {
+      toast.error('Failed to load reports')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-PH', {
@@ -66,27 +97,55 @@ const Reports = () => {
     }).format(amount || 0)
   }
 
+  // Safe date formatter that handles invalid dates
+  const safeFormatDate = (dateValue, formatString = 'MMM dd, yyyy HH:mm') => {
+    if (!dateValue) return 'N/A'
+    try {
+      const date = new Date(dateValue)
+      if (isNaN(date.getTime())) return 'N/A'
+      return format(date, formatString)
+    } catch (e) {
+      return 'N/A'
+    }
+  }
+
   const generateReport = async () => {
     setGenerating(true)
     
-    // Simulate report generation
-    setTimeout(() => {
+    try {
       const newReport = {
-        id: Date.now(),
         type: selectedReport,
-        typeLabel: reportTypes.find(t => t.value === selectedReport)?.label,
-        dateFrom: dateFrom || '2026-01-01',
-        dateTo: dateTo || format(new Date(), 'yyyy-MM-dd'),
+        type_label: reportTypes.find(t => t.value === selectedReport)?.label,
+        date_from: dateFrom || '2026-01-01',
+        date_to: dateTo || format(new Date(), 'yyyy-MM-dd'),
         category: categoryFilter || 'All',
-        generatedAt: new Date().toISOString(),
         data: mockBarData
       }
       
-      setPreviewData(newReport)
-      setGeneratedReports(prev => [newReport, ...prev])
+      const response = await reportService.create(newReport)
+      const savedReport = response.data
+      
+      // Transform to match frontend format
+      const report = {
+        id: savedReport.id,
+        type: savedReport.type,
+        typeLabel: savedReport.type_label,
+        dateFrom: savedReport.date_from,
+        dateTo: savedReport.date_to,
+        category: savedReport.category,
+        generatedAt: savedReport.generated_at,
+        data: savedReport.data,
+        createdBy: savedReport.created_by
+      }
+      
+      setPreviewData(report)
+      setGeneratedReports(prev => [report, ...prev])
       toast.success('Report generated successfully')
+    } catch (error) {
+      toast.error(error.message || 'Failed to generate report')
+    } finally {
       setGenerating(false)
-    }, 1000)
+    }
   }
 
   const downloadPDF = (report) => {
@@ -100,8 +159,8 @@ const Reports = () => {
     
     // Metadata
     doc.setFontSize(10)
-    doc.text(`Generated: ${format(new Date(report.generatedAt), 'MMM dd, yyyy HH:mm')}`, 14, 40)
-    doc.text(`Period: ${format(new Date(report.dateFrom), 'MMM dd, yyyy')} to ${format(new Date(report.dateTo), 'MMM dd, yyyy')}`, 14, 46)
+    doc.text(`Generated: ${safeFormatDate(report.generatedAt, 'MMM dd, yyyy HH:mm')}`, 14, 40)
+    doc.text(`Period: ${safeFormatDate(report.dateFrom, 'MMM dd, yyyy')} to ${safeFormatDate(report.dateTo, 'MMM dd, yyyy')}`, 14, 46)
     doc.text(`Category: ${report.category}`, 14, 52)
     
     // Table
@@ -121,7 +180,7 @@ const Reports = () => {
       headStyles: { fillColor: [30, 58, 138] }
     })
     
-    doc.save(`report_${report.type}_${format(new Date(report.generatedAt), 'yyyyMMdd')}.pdf`)
+    doc.save(`report_${report.type}_${safeFormatDate(report.generatedAt, 'yyyyMMdd')}.pdf`)
     toast.success('PDF downloaded')
   }
 
@@ -137,14 +196,19 @@ const Reports = () => {
     const ws = XLSX.utils.json_to_sheet(data)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Report')
-    XLSX.writeFile(wb, `report_${report.type}_${format(new Date(report.generatedAt), 'yyyyMMdd')}.xlsx`)
+    XLSX.writeFile(wb, `report_${report.type}_${safeFormatDate(report.generatedAt, 'yyyyMMdd')}.xlsx`)
     toast.success('Excel downloaded')
   }
 
-  const deleteReport = (id) => {
-    setGeneratedReports(prev => prev.filter(r => r.id !== id))
-    if (previewData?.id === id) setPreviewData(null)
-    toast.success('Report deleted')
+  const deleteReport = async (id) => {
+    try {
+      await reportService.delete(id)
+      setGeneratedReports(prev => prev.filter(r => r.id !== id))
+      if (previewData?.id === id) setPreviewData(null)
+      toast.success('Report deleted')
+    } catch (error) {
+      toast.error('Failed to delete report')
+    }
   }
 
   const renderChart = () => {
@@ -297,7 +361,11 @@ const Reports = () => {
             <h2 className="text-lg font-semibold text-text-dark mb-4">Saved Reports</h2>
             
             <div className="space-y-2 max-h-64 overflow-y-auto">
-              {generatedReports.length === 0 ? (
+              {loading ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                </div>
+              ) : generatedReports.length === 0 ? (
                 <p className="text-text-light text-center py-4">No reports generated yet</p>
               ) : (
                 generatedReports.map(report => (
@@ -313,8 +381,11 @@ const Reports = () => {
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="font-medium text-text-dark text-sm">{report.typeLabel}</p>
-                        <p className="text-xs text-text-light">
-                          {format(new Date(report.generatedAt), 'MMM dd, yyyy HH:mm')}
+                        <p className="text-xs text-primary font-medium mt-0.5">
+                          By: {report.createdBy?.full_name || 'Unknown'}
+                        </p>
+                        <p className="text-xs text-text-light mt-0.5">
+                          {safeFormatDate(report.generatedAt, 'MMM dd, yyyy HH:mm')}
                         </p>
                       </div>
                       <div className="flex gap-1">
@@ -356,7 +427,10 @@ const Reports = () => {
                   <div>
                     <h2 className="text-xl font-bold text-text-dark">{previewData.typeLabel} Report</h2>
                     <p className="text-sm text-text-light mt-1">
-                      Generated on {format(new Date(previewData.generatedAt), 'MMM dd, yyyy at HH:mm')}
+                      Generated on {safeFormatDate(previewData.generatedAt, 'MMM dd, yyyy at HH:mm')}
+                    </p>
+                    <p className="text-sm text-primary font-medium mt-1">
+                      By: {previewData.createdBy?.full_name || 'Unknown'}
                     </p>
                   </div>
                   <div className="flex gap-2">

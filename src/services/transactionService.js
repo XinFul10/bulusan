@@ -73,3 +73,20 @@ export const documentService = {
     return response.data
   }
 }
+
+export const reportService = {
+  getAll: async () => {
+    const response = await api.get('/reports')
+    return response.data
+  },
+
+  create: async (data) => {
+    const response = await api.post('/reports', data)
+    return response.data
+  },
+
+  delete: async (id) => {
+    const response = await api.delete(`/reports/${id}`)
+    return response.data
+  }
+}
