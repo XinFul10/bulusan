@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\Report;
+use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -50,11 +52,18 @@ class ReportController extends Controller
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date'],
             'category' => ['nullable', 'string'],
-            'data' => ['required', 'array'],
         ]);
+
+        // Calculate real report data from transactions
+        $reportData = $this->calculateReportData(
+            $data['date_from'],
+            $data['date_to'],
+            $data['category']
+        );
 
         $report = Report::create([
             ...$data,
+            'data' => $reportData,
             'created_by' => $request->user()->id,
         ]);
 
@@ -74,6 +83,51 @@ class ReportController extends Controller
                 ],
             ],
         ], 201);
+    }
+
+    // Calculate real report data from transactions
+    private function calculateReportData($dateFrom, $dateTo, $category)
+    {
+        // Get all categories or specific one
+        $categories = Category::query();
+        if ($category && $category !== 'All') {
+            $categories->where('id', $category);
+        }
+        $categories = $categories->get();
+
+        // Calculate totals per category
+        $reportData = [];
+        foreach ($categories as $cat) {
+            $query = Transaction::query();
+            
+            // Apply date filters
+            if ($dateFrom) {
+                $query->whereDate('transaction_date', '>=', $dateFrom);
+            }
+            if ($dateTo) {
+                $query->whereDate('transaction_date', '<=', $dateTo);
+            }
+            
+            // Filter by category
+            $transactions = $query->where('category_id', $cat->id)->get();
+            
+            $totalAllocated = (int) $transactions->sum('allocated_amount');
+            $totalObligated = (int) $transactions->sum('obligated_amount');
+            
+            // Only include categories with data
+            if ($totalAllocated > 0) {
+                $reportData[] = [
+                    'id' => $cat->id,
+                    'name' => $cat->name,
+                    'allocation' => $totalAllocated,
+                    'allocated' => $totalAllocated,
+                    'obligated' => $totalObligated,
+                    'balance' => max(0, $totalAllocated - $totalObligated),
+                ];
+            }
+        }
+
+        return $reportData;
     }
 
     // Delete report (admin can delete any, staff only their own)

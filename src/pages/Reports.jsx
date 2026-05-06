@@ -118,8 +118,8 @@ const Reports = () => {
         type_label: reportTypes.find(t => t.value === selectedReport)?.label,
         date_from: dateFrom || '2026-01-01',
         date_to: dateTo || format(new Date(), 'yyyy-MM-dd'),
-        category: categoryFilter || 'All',
-        data: mockBarData
+        category: categoryFilter || 'All'
+        // Data will be calculated by the backend based on date range and category
       }
       
       const response = await reportService.create(newReport)
@@ -220,7 +220,7 @@ const Reports = () => {
         return (
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={mockBarData}>
+              <BarChart data={previewData.data || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis tickFormatter={(val) => `₱${val/1000}K`} />
@@ -239,15 +239,15 @@ const Reports = () => {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={mockPieData}
+                  data={previewData.data || []}
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
                   fill="#8884d8"
-                  dataKey="value"
+                  dataKey="allocated"
                   label
                 >
-                  {mockPieData.map((entry, index) => (
+                  {(previewData.data || []).map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
