@@ -35,6 +35,30 @@ export const dashboardService = {
   }
 }
 
+export const approvalService = {
+  getSteps: async () => {
+    const response = await api.get('/budget/approval-steps')
+    return response.data
+  },
+
+  approve: async (stepId) => {
+    const response = await api.post(`/budget/approval-steps/${stepId}/approve`)
+    return response.data
+  },
+}
+
+export const requestService = {
+  getAll: async () => {
+    const response = await api.get('/budget/requests')
+    return response.data
+  },
+
+  getById: async (requestId) => {
+    const response = await api.get(`/budget/requests/${requestId}`)
+    return response.data
+  },
+}
+
 export const userService = {
   getAll: async () => {
     const response = await api.get('/users')

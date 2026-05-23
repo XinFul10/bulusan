@@ -7,6 +7,8 @@ use App\Http\Controllers\Api\MeController;
 use App\Http\Controllers\Api\TransactionController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\BudgetApprovalController;
+use App\Http\Controllers\Api\BudgetRequestController;
 use App\Http\Controllers\BudgetController;
 use Illuminate\Support\Facades\Route;
 
@@ -43,3 +45,9 @@ Route::put('/documents/{document}', [DocumentController::class, 'update'])->midd
 
 Route::post('/budget', [BudgetController::class, 'setBudget'])->middleware('auth:sanctum');
 Route::get('/budget', [BudgetController::class, 'getCurrentBudget'])->middleware('auth:sanctum');
+
+Route::get('/budget/approval-steps', [BudgetApprovalController::class, 'index'])->middleware('auth:sanctum');
+Route::post('/budget/approval-steps/{step}/approve', [BudgetApprovalController::class, 'approve'])->middleware('auth:sanctum');
+
+Route::get('/budget/requests', [BudgetRequestController::class, 'index'])->middleware('auth:sanctum');
+Route::get('/budget/requests/{budgetRequest}', [BudgetRequestController::class, 'show'])->middleware('auth:sanctum');

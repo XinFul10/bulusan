@@ -16,6 +16,20 @@ class UserController extends Controller
         }
     }
 
+    private function formatUser(User $user): array
+    {
+        return [
+            'id' => $user->id,
+            'username' => $user->username,
+            'full_name' => $user->full_name,
+            'email' => $user->email,
+            'role' => $user->role,
+            'status' => $user->status,
+            'department' => $user->department,
+            'last_login' => $user->last_login?->toIso8601String(),
+        ];
+    }
+
     public function index(Request $request)
     {
         $this->requireAdmin($request);
@@ -23,15 +37,7 @@ class UserController extends Controller
         $users = User::query()->orderBy('id')->get();
 
         return response()->json([
-            'data' => $users->map(fn (User $u) => [
-                'id' => $u->id,
-                'username' => $u->username,
-                'full_name' => $u->full_name,
-                'email' => $u->email,
-                'role' => $u->role,
-                'status' => $u->status,
-                'last_login' => $u->last_login?->toIso8601String(),
-            ]),
+            'data' => $users->map(fn (User $u) => $this->formatUser($u)),
         ]);
     }
 
@@ -45,6 +51,7 @@ class UserController extends Controller
             'username' => ['required', 'string', 'max:50', 'unique:users,username'],
             'password' => ['required', 'string', 'min:6'],
             'role' => ['required', 'in:admin,staff'],
+            'department' => ['nullable', 'string', 'max:255'],
         ]);
 
         $user = User::create([
@@ -54,19 +61,10 @@ class UserController extends Controller
             'password' => Hash::make($data['password']),
             'role' => $data['role'],
             'status' => 'active',
+            'department' => $data['department'] ?? null,
         ]);
 
-        return response()->json([
-            'data' => [
-                'id' => $user->id,
-                'username' => $user->username,
-                'full_name' => $user->full_name,
-                'email' => $user->email,
-                'role' => $user->role,
-                'status' => $user->status,
-                'last_login' => $user->last_login?->toIso8601String(),
-            ],
-        ], 201);
+        return response()->json(['data' => $this->formatUser($user)], 201);
     }
 
     public function update(Request $request, User $user)
@@ -79,6 +77,7 @@ class UserController extends Controller
             'role' => ['sometimes', 'in:admin,staff'],
             'status' => ['sometimes', 'in:active,inactive'],
             'password' => ['sometimes', 'string', 'min:6'],
+            'department' => ['sometimes', 'nullable', 'string', 'max:255'],
         ]);
 
         if (isset($data['password'])) {
@@ -87,17 +86,7 @@ class UserController extends Controller
 
         $user->fill($data)->save();
 
-        return response()->json([
-            'data' => [
-                'id' => $user->id,
-                'username' => $user->username,
-                'full_name' => $user->full_name,
-                'email' => $user->email,
-                'role' => $user->role,
-                'status' => $user->status,
-                'last_login' => $user->last_login?->toIso8601String(),
-            ],
-        ]);
+        return response()->json(['data' => $this->formatUser($user)]);
     }
 
     public function destroy(Request $request, User $user)
@@ -113,4 +102,3 @@ class UserController extends Controller
         return response()->json(['success' => true]);
     }
 }
-

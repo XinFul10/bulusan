@@ -4,20 +4,23 @@ import { useAuth } from '../context/AuthContext'
 import { userService } from '../services/transactionService'
 import toast from 'react-hot-toast'
 
+const emptyFormData = {
+  full_name: '',
+  email: '',
+  username: '',
+  password: '',
+  confirm_password: '',
+  role: 'staff',
+  department: '',
+}
+
 const UserManagement = () => {
   const { isAdmin } = useAuth()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingUser, setEditingUser] = useState(null)
-  const [formData, setFormData] = useState({
-    full_name: '',
-    email: '',
-    username: '',
-    password: '',
-    confirm_password: '',
-    role: 'staff'
-  })
+  const [formData, setFormData] = useState(emptyFormData)
 
   useEffect(() => {
     fetchUsers()
@@ -54,19 +57,13 @@ const UserManagement = () => {
         email: formData.email,
         username: formData.username,
         password: formData.password,
-        role: formData.role
+        role: formData.role,
+        department: formData.department || null,
       })
       
       toast.success('User created successfully')
       setShowCreateForm(false)
-      setFormData({
-        full_name: '',
-        email: '',
-        username: '',
-        password: '',
-        confirm_password: '',
-        role: 'staff'
-      })
+      setFormData(emptyFormData)
       fetchUsers()
     } catch (error) {
       const message = error.response?.data?.message || error.message || 'Failed to create user'
@@ -82,7 +79,8 @@ const UserManagement = () => {
         full_name: formData.full_name,
         email: formData.email,
         role: formData.role,
-        status: formData.status
+        status: formData.status,
+        department: formData.department || null,
       })
       
       toast.success('User updated successfully')
@@ -129,7 +127,8 @@ const UserManagement = () => {
       password: '',
       confirm_password: '',
       role: user.role,
-      status: user.status
+      status: user.status,
+      department: user.department || '',
     })
     setShowCreateForm(false)
   }
@@ -154,14 +153,7 @@ const UserManagement = () => {
           onClick={() => {
             setShowCreateForm(true)
             setEditingUser(null)
-            setFormData({
-              full_name: '',
-              email: '',
-              username: '',
-              password: '',
-              confirm_password: '',
-              role: 'staff'
-            })
+            setFormData(emptyFormData)
           }}
           className="btn-primary flex items-center gap-2"
         >
@@ -180,6 +172,7 @@ const UserManagement = () => {
               <thead>
                 <tr>
                   <th className="table-header">User</th>
+                  <th className="table-header">Department</th>
                   <th className="table-header">Role</th>
                   <th className="table-header">Status</th>
                   <th className="table-header">Last Login</th>
@@ -189,13 +182,13 @@ const UserManagement = () => {
               <tbody className="divide-y divide-gray-200">
                 {loading ? (
                   <tr>
-                    <td colSpan="5" className="text-center py-8">
+                    <td colSpan="6" className="text-center py-8">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                     </td>
                   </tr>
                 ) : users.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="text-center py-8 text-text-light">
+                    <td colSpan="6" className="text-center py-8 text-text-light">
                       No users found
                     </td>
                   </tr>
@@ -213,6 +206,9 @@ const UserManagement = () => {
                             <p className="text-xs text-text-light">{user.email}</p>
                           </div>
                         </div>
+                      </td>
+                      <td className="table-cell text-sm text-text-dark">
+                        {user.department || '—'}
                       </td>
                       <td className="table-cell">
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
@@ -359,7 +355,15 @@ const UserManagement = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-text-dark mb-1">
+                    Department
                   </label>
+                  <input
+                    type="text"
+                    value={formData.department}
+                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                    className="input-field"
+                    placeholder="e.g. Office of the Municipal Tourism Office"
+                  />
                 </div>
 
                 {editingUser && (
