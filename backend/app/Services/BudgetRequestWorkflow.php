@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\BudgetRequest;
 use App\Models\BudgetRequestStep;
+use App\Models\Transaction;
 use Carbon\Carbon;
 
 class BudgetRequestWorkflow
@@ -146,7 +147,15 @@ class BudgetRequestWorkflow
     public function refreshRequestMeta(BudgetRequest $request): void
     {
         $request->load('steps');
-        $request->forceFill(['status' => $this->deriveStatus($request)])->save();
+
+        $status = $this->deriveStatus($request);
+        $request->forceFill(['status' => $status])->save();
+
+        if (in_array($status, ['approved', 'completed'], true)) {
+            Transaction::query()
+                ->where('budget_request_id', $request->id)
+                ->update(['is_visible_in_transactions' => true]);
+        }
     }
 
     private function maybeCompleteRequest(BudgetRequest $request): void

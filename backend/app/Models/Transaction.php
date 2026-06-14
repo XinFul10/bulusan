@@ -15,12 +15,15 @@ class Transaction extends Model
         'allocated_amount',
         'obligated_amount',
         'created_by',
+        'budget_request_id',
+        'is_visible_in_transactions',
     ];
 
     protected function casts(): array
     {
         return [
             'transaction_date' => 'date',
+            'is_visible_in_transactions' => 'boolean',
         ];
     }
 
@@ -32,5 +35,10 @@ class Transaction extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function budgetRequest(): BelongsTo
+    {
+        return $this->belongsTo(BudgetRequest::class);
     }
 }

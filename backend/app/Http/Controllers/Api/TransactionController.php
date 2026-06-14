@@ -4,17 +4,24 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Budget;
+use App\Models\BudgetRequest;
 use App\Models\Category;
 use App\Models\Transaction;
+use App\Services\BudgetRequestWorkflow;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
 class TransactionController extends Controller
 {
+    public function __construct(private BudgetRequestWorkflow $workflow)
+    {
+    }
+
     public function index()
     {
         $transactions = Transaction::query()
+            ->where('is_visible_in_transactions', true)
             ->with(['category:id,name', 'creator:id,full_name'])
             ->orderByDesc('transaction_date')
             ->orderByDesc('id')
@@ -130,9 +137,25 @@ class TransactionController extends Controller
 
         $this->ensureWithinBudget($data);
 
+        $nextNumber = BudgetRequest::query()
+            ->whereYear('submitted_at', now()->year)
+            ->count() + 1;
+
+        $budgetRequest = BudgetRequest::query()->create([
+            'request_number' => sprintf('BR-%s-%03d-%d', now()->format('Y'), $nextNumber, $request->user()->id),
+            'title' => $data['description'],
+            'status' => 'pending',
+            'created_by' => $request->user()->id,
+            'submitted_at' => now(),
+        ]);
+
+        $this->workflow->createStepsForRequest($budgetRequest);
+
         $transaction = Transaction::create([
             ...$data,
             'created_by' => $request->user()->id,
+            'budget_request_id' => $budgetRequest->id,
+            'is_visible_in_transactions' => false,
         ])->load(['category:id,name', 'creator:id,full_name']);
 
         return response()->json([
