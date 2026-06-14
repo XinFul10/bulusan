@@ -197,9 +197,17 @@ const UserManagement = () => {
                     <tr key={user.id} className="hover:bg-gray-50">
                       <td className="table-cell">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-semibold">
-                            {user.full_name.charAt(0)}
-                          </div>
+                          {user.avatar_url ? (
+                            <img
+                              src={user.avatar_url}
+                              alt={user.full_name}
+                              className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-semibold">
+                              {user.full_name?.charAt(0) || 'U'}
+                            </div>
+                          )}
                           <div>
                             <p className="font-medium text-text-dark">{user.full_name}</p>
                             <p className="text-xs text-text-light">@{user.username}</p>

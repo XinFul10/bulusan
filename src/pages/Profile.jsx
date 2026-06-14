@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { profileService } from '../services/profileService'
 
 const Profile = () => {
-  const { user, loading: authLoading } = useAuth()
+  const { user, setUser, loading: authLoading } = useAuth()
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState(null)
@@ -35,13 +35,22 @@ const Profile = () => {
     const load = async () => {
       try {
         const res = await profileService.getMe()
-        setAvatarUrl(res?.data?.avatar_url || null)
+        const nextAvatarUrl = res?.data?.avatar_url || user?.avatar_url || null
+
+        setAvatarUrl(nextAvatarUrl)
+
+        if (res?.data?.avatar_url) {
+          const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
+          const updatedUser = { ...storedUser, avatar_url: res.data.avatar_url }
+          localStorage.setItem('user', JSON.stringify(updatedUser))
+          setUser((prev) => (prev ? { ...prev, avatar_url: res.data.avatar_url } : prev))
+        }
       } catch {
         // ignore; page still usable with local user info
       }
     }
     if (!authLoading && user) load()
-  }, [authLoading, user])
+  }, [authLoading, user, setUser])
 
   const handleSave = async (e) => {
     e.preventDefault()
@@ -87,12 +96,29 @@ const Profile = () => {
 
   const handleAvatarChange = async (file) => {
     if (!file) return
+
+    const previousAvatarUrl = avatarUrl
+    const previewUrl = URL.createObjectURL(file)
+
+    setAvatarUrl(previewUrl)
+
     try {
       setUploading(true)
       const res = await profileService.uploadAvatar(file)
-      setAvatarUrl(res?.data?.avatar_url || null)
+      const nextAvatarUrl = res?.data?.avatar_url || null
+
+      setAvatarUrl(nextAvatarUrl)
+
+      if (nextAvatarUrl) {
+        const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
+        const updatedUser = { ...storedUser, avatar_url: nextAvatarUrl }
+        localStorage.setItem('user', JSON.stringify(updatedUser))
+        setUser((prev) => (prev ? { ...prev, avatar_url: nextAvatarUrl } : prev))
+      }
+
       toast.success('Profile picture updated')
     } catch (err) {
+      setAvatarUrl(previousAvatarUrl)
       toast.error(err?.response?.data?.message || 'Failed to upload profile picture')
     } finally {
       setUploading(false)

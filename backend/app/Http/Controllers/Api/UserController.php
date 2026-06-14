@@ -27,6 +27,7 @@ class UserController extends Controller
             'status' => $user->status,
             'department' => $user->department,
             'last_login' => $user->last_login?->toIso8601String(),
+            'avatar_url' => $user->avatarUrl(),
         ];
     }
 

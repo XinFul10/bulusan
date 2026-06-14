@@ -41,9 +41,17 @@ const Header = () => {
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
           >
-            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white font-semibold text-sm">
-              {user?.full_name?.charAt(0) || 'U'}
-            </div>
+            {user?.avatar_url ? (
+              <img
+                src={user.avatar_url}
+                alt="Profile"
+                className="w-8 h-8 rounded-full object-cover border border-gray-200"
+              />
+            ) : (
+              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                {user?.full_name?.charAt(0) || 'U'}
+              </div>
+            )}
             <div className="hidden md:block text-left">
               <p className="text-sm font-medium text-text-dark">{user?.full_name}</p>
               <p className="text-xs text-text-light capitalize">{user?.role}</p>
