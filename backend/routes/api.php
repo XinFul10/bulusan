@@ -50,4 +50,5 @@ Route::get('/budget/approval-steps', [BudgetApprovalController::class, 'index'])
 Route::post('/budget/approval-steps/{step}/approve', [BudgetApprovalController::class, 'approve'])->middleware('auth:sanctum');
 
 Route::get('/budget/requests', [BudgetRequestController::class, 'index'])->middleware('auth:sanctum');
+Route::post('/budget/requests/{budgetRequest}/steps/{budgetRequestStep}/approve', [BudgetRequestController::class, 'approveStep'])->middleware('auth:sanctum');
 Route::get('/budget/requests/{budgetRequest}', [BudgetRequestController::class, 'show'])->middleware('auth:sanctum');

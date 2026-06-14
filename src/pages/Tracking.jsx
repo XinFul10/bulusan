@@ -89,12 +89,22 @@ const Tracking = () => {
   }, [loadApprovalSteps, loadRequests])
 
   const handleApprove = async () => {
-    const approvalStep = departments.find((step) => step.name === currentStep?.name)
-
-    if (!approvalStep?.id) return
+    if (!currentStep?.id) return
 
     setApproving(true)
     try {
+      if (selectedRequest?.id) {
+        const requestKey = selectedRequest.requestId || selectedRequest.id
+        const response = await requestService.approveStep(requestKey, currentStep.id)
+        setSelectedRequest(response.data || selectedRequest)
+        await loadRequests()
+        toast.success('Approval recorded')
+        return
+      }
+
+      const approvalStep = departments.find((step) => step.name === currentStep?.name)
+      if (!approvalStep?.id) return
+
       const response = await approvalService.approve(approvalStep.id)
       setDepartments(response.data || [])
       await loadRequests()

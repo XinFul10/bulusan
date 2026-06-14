@@ -12,7 +12,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../../context/AuthContext'
 
-const Sidebar = () => {
+const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   const { isAdmin } = useAuth()
   const [isMobileOpen, setIsMobileOpen] = useState(false)
 
@@ -40,19 +40,32 @@ const Sidebar = () => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 h-screen w-64 bg-primary text-white flex flex-col transition-transform duration-300 z-40
+        className={`fixed left-0 top-0 h-screen bg-primary text-white flex flex-col transition-all duration-300 z-40
+          ${isCollapsed ? 'w-20' : 'w-64'}
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
         {/* Logo Section */}
-        <div className="p-6 border-b border-primary-light/30">
-          <div className="flex items-center gap-3">
-            <BuildingLibraryIcon className="w-8 h-8" />
-            <div>
-              <h1 className="font-bold text-sm leading-tight">Municipality of</h1>
-              <h2 className="font-bold text-lg leading-tight">BULUSAN</h2>
+        <div className="p-4 border-b border-primary-light/30">
+          <div className="flex items-center justify-between gap-3">
+            <div className={`flex items-center gap-3 ${isCollapsed ? 'justify-center w-full' : ''}`}>
+              <BuildingLibraryIcon className="w-8 h-8 shrink-0" />
+              {!isCollapsed && (
+                <div>
+                  <h1 className="font-bold text-sm leading-tight">Municipality of</h1>
+                  <h2 className="font-bold text-lg leading-tight">BULUSAN</h2>
+                </div>
+              )}
             </div>
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              className="hidden rounded-md p-2 text-blue-100 hover:bg-white/10 hover:text-white lg:inline-flex"
+              aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {isCollapsed ? <Bars3Icon className="w-5 h-5" /> : <XMarkIcon className="w-5 h-5" />}
+            </button>
           </div>
-          <p className="text-xs mt-2 text-blue-200">OMTO</p>
+          {!isCollapsed && <p className="text-xs mt-2 text-blue-200">OMTO</p>}
         </div>
 
         {/* Navigation */}
@@ -64,23 +77,24 @@ const Sidebar = () => {
               onClick={() => setIsMobileOpen(false)}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200
+                ${isCollapsed ? 'justify-center' : ''}
                 ${isActive 
                   ? 'bg-white/20 text-white font-medium' 
                   : 'text-blue-100 hover:bg-white/10 hover:text-white'
                 }`
               }
             >
-              <item.icon className="w-5 h-5" />
-              <span>{item.name}</span>
+              <item.icon className="w-5 h-5 shrink-0" />
+              {!isCollapsed && <span>{item.name}</span>}
             </NavLink>
           ))}
         </nav>
 
         {/* Footer */}
         <div className="p-4 border-t border-primary-light/30">
-          <p className="text-xs text-blue-200 text-center">
-            Fiscal Year 2026
-          </p>
+          {!isCollapsed && (
+            <p className="text-xs text-blue-200 text-center">Fiscal Year 2026</p>
+          )}
         </div>
       </aside>
 

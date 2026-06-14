@@ -158,7 +158,7 @@ class BudgetRequestWorkflow
         }
     }
 
-    private function maybeCompleteRequest(BudgetRequest $request): void
+    public function completeIfAllApproved(BudgetRequest $request): void
     {
         $pending = $request->steps
             ->filter(fn (BudgetRequestStep $step) => !in_array($step->name, ['Completed'], true))

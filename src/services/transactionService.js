@@ -57,6 +57,13 @@ export const requestService = {
     const response = await api.get(`/budget/requests/${requestId}`)
     return response.data
   },
+
+  approveStep: async (requestId, stepId) => {
+    const response = await api.post(
+      `/budget/requests/${encodeURIComponent(requestId)}/steps/${stepId}/approve`
+    )
+    return response.data
+  },
 }
 
 export const userService = {
