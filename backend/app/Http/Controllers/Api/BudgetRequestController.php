@@ -54,28 +54,27 @@ class BudgetRequestController extends Controller
 
         $samples = [
             [
-                'request_number' => 'BR-2026-001',
                 'title' => 'IT Equipment Purchase',
                 'submitted_at' => now()->subDays(2),
                 'step_approvals' => ['Department Head', 'Budget Office'],
             ],
             [
-                'request_number' => 'BR-2026-002',
                 'title' => 'Tourism Promotion Materials',
                 'submitted_at' => now()->subDay(),
                 'step_approvals' => ['Department Head'],
             ],
             [
-                'request_number' => 'BR-2026-003',
                 'title' => 'Staff Training Workshop',
                 'submitted_at' => now(),
                 'step_approvals' => [],
             ],
         ];
 
-        foreach ($samples as $sample) {
+        foreach ($samples as $index => $sample) {
+            $requestNumber = sprintf('BR-%s-%03d-%d', now()->format('Y'), $index + 1, $user->id);
+
             $budgetRequest = BudgetRequest::query()->create([
-                'request_number' => $sample['request_number'],
+                'request_number' => $requestNumber,
                 'title' => $sample['title'],
                 'status' => 'pending',
                 'created_by' => $user->id,

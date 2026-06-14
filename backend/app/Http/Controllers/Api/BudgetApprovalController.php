@@ -49,15 +49,27 @@ class BudgetApprovalController extends Controller
         }
 
         $current = $this->currentApprovableStep();
-        if (!$current || $current->id !== $step->id) {
+
+        if ($user->role !== 'admin' && (!$current || $current->id !== $step->id)) {
             return response()->json(['message' => 'This step is not awaiting approval'], 422);
         }
 
-        $step->forceFill([
-            'approved' => true,
-            'approved_at' => now(),
-            'approved_by' => $user->id,
-        ])->save();
+        if ($user->role === 'admin') {
+            BudgetApprovalStep::query()
+                ->where('approved', false)
+                ->whereNotIn('name', ['Completed'])
+                ->update([
+                    'approved' => true,
+                    'approved_at' => now(),
+                    'approved_by' => $user->id,
+                ]);
+        } else {
+            $step->forceFill([
+                'approved' => true,
+                'approved_at' => now(),
+                'approved_by' => $user->id,
+            ])->save();
+        }
 
         $this->maybeCompleteWorkflow();
         $this->requestWorkflow->syncApprovedStep($step->name);

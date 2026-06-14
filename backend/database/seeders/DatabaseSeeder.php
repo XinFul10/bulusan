@@ -41,6 +41,51 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+        $officeAccounts = [
+            [
+                'username' => 'department_head',
+                'full_name' => 'Department Head Officer',
+                'email' => 'department_head@bulusan.gov.ph',
+                'department' => 'Department Head',
+                'password' => 'departmenthead1234!',
+            ],
+            [
+                'username' => 'budget_office',
+                'full_name' => 'Budget Office Officer',
+                'email' => 'budget_office@bulusan.gov.ph',
+                'department' => 'Budget Office',
+                'password' => 'budgetoffice1234!',
+            ],
+            [
+                'username' => 'finance_office',
+                'full_name' => 'Finance Office Officer',
+                'email' => 'finance_office@bulusan.gov.ph',
+                'department' => 'Finance Office',
+                'password' => 'financeoffice1234!',
+            ],
+            [
+                'username' => 'mayors_office',
+                'full_name' => 'Mayor\'s Office Officer',
+                'email' => 'mayors_office@bulusan.gov.ph',
+                'department' => "Mayor's Office",
+                'password' => 'mayorsoffice1234!',
+            ],
+        ];
+
+        foreach ($officeAccounts as $account) {
+            User::query()->firstOrCreate(
+                ['username' => $account['username']],
+                [
+                    'full_name' => $account['full_name'],
+                    'email' => $account['email'],
+                    'password' => Hash::make($account['password']),
+                    'role' => 'staff',
+                    'status' => 'active',
+                    'department' => $account['department'],
+                ]
+            );
+        }
+
         $categories = [
             ['name' => 'Capacity Development', 'allocation' => 400000],
             ['name' => 'TM & Promotions', 'allocation' => 500000],
