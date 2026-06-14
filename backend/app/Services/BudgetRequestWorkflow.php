@@ -64,7 +64,7 @@ class BudgetRequestWorkflow
                     'approved_at' => now(),
                 ])->save();
 
-                $this->maybeCompleteRequest($request);
+                $this->completeIfAllApproved($request);
                 $this->refreshRequestMeta($request->fresh('steps'));
             });
     }

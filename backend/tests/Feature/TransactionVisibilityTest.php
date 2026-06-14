@@ -30,7 +30,6 @@ class TransactionVisibilityTest extends TestCase
                 'transaction_date' => now()->toDateString(),
                 'description' => 'New request for approval',
                 'category_id' => $category->id,
-                'a_b_test' => 'T1',
                 'allocated_amount' => 5000,
                 'obligated_amount' => 0,
             ]);

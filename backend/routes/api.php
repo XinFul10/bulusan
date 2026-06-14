@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\BudgetApprovalController;
 use App\Http\Controllers\Api\BudgetRequestController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\BudgetController;
 use Illuminate\Support\Facades\Route;
 
@@ -52,3 +53,9 @@ Route::post('/budget/approval-steps/{step}/approve', [BudgetApprovalController::
 Route::get('/budget/requests', [BudgetRequestController::class, 'index'])->middleware('auth:sanctum');
 Route::post('/budget/requests/{budgetRequest}/steps/{budgetRequestStep}/approve', [BudgetRequestController::class, 'approveStep'])->middleware('auth:sanctum');
 Route::get('/budget/requests/{budgetRequest}', [BudgetRequestController::class, 'show'])->middleware('auth:sanctum');
+Route::post('/budget/requests/{budgetRequest}/steps/{budgetRequestStep}/reject', [BudgetRequestController::class, 'rejectStep'])->middleware('auth:sanctum');
+
+Route::get('/notifications', [NotificationController::class, 'index'])->middleware('auth:sanctum');
+Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount'])->middleware('auth:sanctum');
+Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->middleware('auth:sanctum');
+Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->middleware('auth:sanctum');

@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { 
   PlusIcon, 
@@ -16,6 +17,7 @@ import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
 import 'jspdf-autotable'
+import { scrollToElement } from '../utils/notificationNavigation'
 
 const defaultCategories = [
   { id: '', name: 'All Categories' },
@@ -33,6 +35,10 @@ const statusOptions = [
 ]
 
 const Transactions = () => {
+  const [searchParams] = useSearchParams()
+  const highlightRequestId = searchParams.get('requestId')
+  const rowRefs = useRef({})
+  const handledHighlight = useRef(null)
   const [transactions, setTransactions] = useState([])
   const [filteredTransactions, setFilteredTransactions] = useState([])
   const [categories, setCategories] = useState(defaultCategories)
@@ -125,6 +131,25 @@ const Transactions = () => {
     setCurrentPage(1)
   }, [transactions, searchTerm, categoryFilter, statusFilter, dateFrom, dateTo])
 
+  // Auto-highlight transaction from notification ?requestId=
+  useEffect(() => {
+    if (loading || !highlightRequestId || filteredTransactions.length === 0) return
+    if (handledHighlight.current === highlightRequestId) return
+
+    const index = filteredTransactions.findIndex((t) => t.request_id === highlightRequestId)
+    if (index < 0) return
+
+    const targetPage = Math.floor(index / pageSize) + 1
+    if (currentPage !== targetPage) {
+      setCurrentPage(targetPage)
+      return
+    }
+
+    handledHighlight.current = highlightRequestId
+    const transaction = filteredTransactions[index]
+    scrollToElement(rowRefs.current[transaction.id])
+  }, [loading, highlightRequestId, filteredTransactions, pageSize, currentPage])
+
   // Pagination
   const totalPages = Math.ceil(filteredTransactions.length / pageSize)
   const paginatedData = filteredTransactions.slice(
@@ -148,7 +173,6 @@ const Transactions = () => {
     setEditData({
       ...transaction,
       date: transaction.transaction_date,
-      a_b_test: transaction.a_b_test || 'None'
     })
     setIsModalOpen(true)
   }
@@ -173,7 +197,6 @@ const Transactions = () => {
       Date: format(new Date(t.transaction_date), 'MMM dd, yy'),
       Description: t.description,
       Category: t.category_name,
-      'A/B Test': t.a_b_test || '-',
       Allocated: t.allocated_amount,
       Obligated: t.obligated_amount,
       Balance: t.balance
@@ -195,14 +218,13 @@ const Transactions = () => {
       format(new Date(t.transaction_date), 'MMM dd, yy'),
       t.description,
       t.category_name,
-      t.a_b_test || '-',
       formatCurrency(t.allocated_amount),
       formatCurrency(t.obligated_amount),
       formatCurrency(t.balance)
     ])
 
     doc.autoTable({
-      head: [['Date', 'Description', 'Category', 'A/B', 'Allocated', 'Obligated', 'Balance']],
+      head: [['Date', 'Description', 'Category', 'Allocated', 'Obligated', 'Balance']],
       body: tableData,
       startY: 35,
       styles: { fontSize: 8 },
@@ -214,16 +236,16 @@ const Transactions = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-text-dark">Transactions</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h1 className="text-xl sm:text-2xl font-bold text-text-dark">Transactions</h1>
         <button
           onClick={() => {
             setEditData(null)
             setIsModalOpen(true)
           }}
-          className="btn-primary flex items-center gap-2"
+          className="btn-primary flex items-center justify-center gap-2 min-h-[44px] w-full sm:w-auto"
         >
           <PlusIcon className="w-5 h-5" />
           New Transaction
@@ -270,34 +292,34 @@ const Transactions = () => {
         </div>
 
         {/* Date Range & Export */}
-        <div className="flex flex-col md:flex-row gap-4 items-end">
-          <div className="flex gap-2 items-center">
+        <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-end">
+          <div className="flex flex-col xs:flex-row gap-2 items-stretch sm:items-center">
             <input
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="input-field"
+              className="input-field min-h-[44px]"
             />
-            <span className="text-text-light">to</span>
+            <span className="text-text-light text-center sm:text-left">to</span>
             <input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="input-field"
+              className="input-field min-h-[44px]"
             />
           </div>
           
-          <div className="flex gap-2 ml-auto">
+          <div className="flex gap-2 sm:ml-auto">
             <button
               onClick={exportToCSV}
-              className="btn-secondary flex items-center gap-2"
+              className="btn-secondary flex items-center justify-center gap-2 min-h-[44px] flex-1 sm:flex-none"
             >
               <ArrowDownTrayIcon className="w-4 h-4" />
               CSV
             </button>
             <button
               onClick={exportToPDF}
-              className="btn-secondary flex items-center gap-2"
+              className="btn-secondary flex items-center justify-center gap-2 min-h-[44px] flex-1 sm:flex-none"
             >
               <ArrowDownTrayIcon className="w-4 h-4" />
               PDF
@@ -307,15 +329,15 @@ const Transactions = () => {
       </div>
 
       {/* Table */}
-      <div className="card overflow-x-auto">
-        <table className="w-full">
+      <div className="card p-0 sm:p-6 overflow-hidden">
+        <div className="responsive-table-wrap">
+        <table className="w-full min-w-[640px]">
           <thead>
             <tr>
               <th className="table-header">Date</th>
               <th className="table-header">Description</th>
               <th className="table-header">Created By</th>
               <th className="table-header">Category</th>
-              <th className="table-header">A/B Test</th>
               <th className="table-header text-right">Allocated</th>
               <th className="table-header text-right">Obligated</th>
               <th className="table-header text-right">Balance</th>
@@ -326,7 +348,7 @@ const Transactions = () => {
           <tbody className="divide-y divide-gray-200">
             {loading ? (
               <tr>
-                <td colSpan="9" className="text-center py-8">
+                <td colSpan="8" className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                 </td>
               </tr>
@@ -339,19 +361,21 @@ const Transactions = () => {
             ) : (
               paginatedData.map((transaction) => {
                 const status = getStatus(transaction.allocated_amount, transaction.obligated_amount)
+                const isHighlighted = highlightRequestId && transaction.request_id === highlightRequestId
                 return (
-                  <tr key={transaction.id} className="hover:bg-gray-50">
+                  <tr
+                    key={transaction.id}
+                    ref={(el) => { rowRefs.current[transaction.id] = el }}
+                    className={`hover:bg-gray-50 transition-colors duration-300 ${
+                      isHighlighted ? 'ring-2 ring-inset ring-primary/50 bg-primary/5' : ''
+                    }`}
+                  >
                     <td className="table-cell">
                       {format(new Date(transaction.transaction_date), 'MMM dd, yy')}
                     </td>
                     <td className="table-cell">{transaction.description}</td>
                     <td className="table-cell">{transaction.creator_name || 'Unknown'}</td>
                     <td className="table-cell">{transaction.category_name}</td>
-                    <td className="table-cell">
-                      <span className="px-2 py-1 bg-gray-100 rounded text-xs">
-                        {transaction.a_b_test || '-'}
-                      </span>
-                    </td>
                     <td className="table-cell text-right font-medium">
                       {formatCurrency(transaction.allocated_amount)}
                     </td>
@@ -371,7 +395,7 @@ const Transactions = () => {
                         {(isAdmin() || transaction.created_by === user?.id) && (
                           <button
                             onClick={() => handleEdit(transaction)}
-                            className="p-1 text-primary hover:bg-primary/10 rounded"
+                            className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-primary hover:bg-primary/10 rounded"
                             title="Edit"
                           >
                             <PencilIcon className="w-4 h-4" />
@@ -380,7 +404,7 @@ const Transactions = () => {
                         {(isAdmin() || transaction.created_by === user?.id) && (
                           <button
                             onClick={() => handleDelete(transaction.id)}
-                            className="p-1 text-danger hover:bg-danger/10 rounded"
+                            className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-danger hover:bg-danger/10 rounded"
                             title="Delete"
                           >
                             <TrashIcon className="w-4 h-4" />
@@ -394,10 +418,11 @@ const Transactions = () => {
             )}
           </tbody>
         </table>
+        </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mt-4 pt-4 px-4 sm:px-0 border-t border-gray-200">
+          <div className="flex flex-col xs:flex-row items-start xs:items-center gap-2">
             <span className="text-sm text-text-light">Rows per page:</span>
             <select
               value={pageSize}
@@ -411,16 +436,16 @@ const Transactions = () => {
               <option value={25}>25</option>
               <option value={50}>50</option>
             </select>
-            <span className="text-sm text-text-light">
+            <span className="text-sm text-text-light hidden sm:inline">
               Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, filteredTransactions.length)} of {filteredTransactions.length}
             </span>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between sm:justify-end gap-2">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronLeftIcon className="w-5 h-5" />
             </button>
@@ -430,7 +455,7 @@ const Transactions = () => {
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages || totalPages === 0}
-              className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronRightIcon className="w-5 h-5" />
             </button>

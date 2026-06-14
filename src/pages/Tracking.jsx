@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import BudgetProgressStepper, { getActiveStepIndex } from '../components/Tracking/BudgetProgressStepper'
 import { useAuth } from '../context/AuthContext'
 import { approvalService, requestService } from '../services/transactionService'
 import { getStatusClass } from '../utils/requestStatus'
+import { scrollToElement } from '../utils/notificationNavigation'
 
 const normalize = (value) => (value ?? '').trim().toLowerCase()
 
@@ -34,11 +36,16 @@ const departmentCanApprove = (user, stepName) => {
 
 const Tracking = () => {
   const { user } = useAuth()
+  const [searchParams] = useSearchParams()
+  const requestIdParam = searchParams.get('requestId')
   const [requests, setRequests] = useState([])
   const [departments, setDepartments] = useState([])
   const [loading, setLoading] = useState(true)
   const [approving, setApproving] = useState(false)
   const [selectedRequest, setSelectedRequest] = useState(null)
+  const rowRefs = useRef({})
+  const timelineRef = useRef(null)
+  const handledRequestId = useRef(null)
 
   const timelineDepartments = useMemo(
     () => selectedRequest?.departments || departments,
@@ -88,6 +95,38 @@ const Tracking = () => {
     return () => window.removeEventListener('refreshData', handleRefresh)
   }, [loadApprovalSteps, loadRequests])
 
+  const selectRequest = useCallback(async (request) => {
+    try {
+      const response = await requestService.getById(request.id)
+      setSelectedRequest(response.data || request)
+    } catch (error) {
+      console.error('Failed to load request tracking details', error)
+      setSelectedRequest(request)
+    }
+  }, [])
+
+  // Auto-select request from URL ?requestId=BR-2026-001
+  useEffect(() => {
+    if (loading || !requestIdParam || requests.length === 0) return
+    if (handledRequestId.current === requestIdParam) return
+
+    const match = requests.find(
+      (r) => r.id === requestIdParam || r.requestId === requestIdParam
+    )
+
+    if (!match) return
+
+    handledRequestId.current = requestIdParam
+
+    const loadFromUrl = async () => {
+      await selectRequest(match)
+      scrollToElement(timelineRef.current, { behavior: 'smooth', block: 'start' })
+      scrollToElement(rowRefs.current[match.id])
+    }
+
+    loadFromUrl()
+  }, [loading, requestIdParam, requests, selectRequest])
+
   const handleApprove = async () => {
     if (!currentStep?.id) return
 
@@ -99,6 +138,7 @@ const Tracking = () => {
         setSelectedRequest(response.data || selectedRequest)
         await loadRequests()
         toast.success('Approval recorded')
+        window.dispatchEvent(new Event('notifications:refresh'))
         return
       }
 
@@ -110,6 +150,7 @@ const Tracking = () => {
       await loadRequests()
       toast.success('Approval recorded')
       window.dispatchEvent(new Event('refreshData'))
+      window.dispatchEvent(new Event('notifications:refresh'))
     } catch (e) {
       const message = e.response?.data?.message || 'Failed to record approval'
       toast.error(message)
@@ -118,20 +159,15 @@ const Tracking = () => {
     }
   }
 
-  const selectRequest = async (request) => {
-    try {
-      const response = await requestService.getById(request.id)
-      setSelectedRequest(response.data || request)
-    } catch (error) {
-      console.error('Failed to load request tracking details', error)
-      setSelectedRequest(request)
-    }
-  }
-
   const inReviewCount = useMemo(
     () => requests.filter((r) => r.status === 'Under Review').length,
     [requests]
   )
+
+  const isHighlighted = (req) => {
+    if (!requestIdParam) return selectedRequest?.id === req.id
+    return req.id === requestIdParam || req.requestId === requestIdParam || selectedRequest?.id === req.id
+  }
 
   if (loading) {
     return (
@@ -142,20 +178,20 @@ const Tracking = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold text-text-dark">Budget Tracking</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-text-dark">Budget Tracking</h1>
           <p className="text-sm text-text-light mt-1">
             Follow allocation through expenses, review, and finalization
           </p>
         </div>
       </div>
 
-      <div className="card py-8 px-6">
-        <div className="mb-3 flex items-center justify-between gap-3">
+      <div ref={timelineRef} id="request-timeline" className="card py-6 sm:py-8 px-4 sm:px-6">
+        <div className="mb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold text-text-dark">Request Timeline</h2>
+            <h2 className="text-base sm:text-lg font-semibold text-text-dark">Request Timeline</h2>
             <p className="text-sm text-text-light">
               {selectedRequest
                 ? `Showing approval stages for ${selectedRequest.requestId || selectedRequest.id}.`
@@ -163,7 +199,7 @@ const Tracking = () => {
             </p>
           </div>
           {selectedRequest && (
-            <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+            <span className="inline-flex items-center self-start rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
               Active request: {selectedRequest.requestId || selectedRequest.id}
             </span>
           )}
@@ -178,7 +214,7 @@ const Tracking = () => {
       </div>
 
       <div>
-        <h2 className="text-lg font-semibold text-text-dark mb-1">Request Progress</h2>
+        <h2 className="text-base sm:text-lg font-semibold text-text-dark mb-1">Request Progress</h2>
         <p className="text-sm text-text-light mb-4">
           {requests.length} request{requests.length !== 1 ? 's' : ''} submitted
           {inReviewCount > 0 && ` · ${inReviewCount} under review`}
@@ -186,17 +222,17 @@ const Tracking = () => {
       </div>
 
       <div className="card p-0 overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="responsive-table-wrap">
           <table className="min-w-full divide-y divide-gray-200">
             <thead>
               <tr>
                 <th scope="col" className="table-header">Request ID</th>
                 <th scope="col" className="table-header">Request Title</th>
-                <th scope="col" className="table-header">Requested By</th>
-                <th scope="col" className="table-header">Current Department</th>
+                <th scope="col" className="table-header hidden md:table-cell">Requested By</th>
+                <th scope="col" className="table-header">Current Dept.</th>
                 <th scope="col" className="table-header">Status</th>
-                <th scope="col" className="table-header">Progress</th>
-                <th scope="col" className="table-header">Date Submitted</th>
+                <th scope="col" className="table-header hidden sm:table-cell">Progress</th>
+                <th scope="col" className="table-header hidden lg:table-cell">Date Submitted</th>
                 <th scope="col" className="table-header">Action</th>
               </tr>
             </thead>
@@ -204,25 +240,26 @@ const Tracking = () => {
               {requests.map((req, idx) => (
                 <tr
                   key={req.id}
-                  className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ${
-                    selectedRequest?.id === req.id ? 'ring-1 ring-primary/30 bg-primary/5' : ''
+                  ref={(el) => { rowRefs.current[req.id] = el }}
+                  className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} transition-colors duration-300 ${
+                    isHighlighted(req) ? 'ring-2 ring-primary/40 bg-primary/5' : ''
                   }`}
                 >
                   <td className="table-cell font-medium whitespace-nowrap">
                     <button
                       type="button"
-                      className="text-primary hover:text-primary-light transition-colors duration-200 underline-offset-2 hover:underline"
+                      className="text-primary hover:text-primary-light transition-colors duration-200 underline-offset-2 hover:underline min-h-[44px] min-w-[44px] inline-flex items-center"
                       onClick={() => selectRequest(req)}
                     >
                       {req.id}
                     </button>
                   </td>
                   <td className="table-cell">
-                    <span className="block max-w-[14rem] truncate" title={req.title}>
+                    <span className="block max-w-[10rem] sm:max-w-[14rem] truncate" title={req.title}>
                       {req.title}
                     </span>
                   </td>
-                  <td className="table-cell">{req.requestedBy}</td>
+                  <td className="table-cell hidden md:table-cell">{req.requestedBy}</td>
                   <td className="table-cell">{req.currentDepartment}</td>
                   <td className="table-cell">
                     <span
@@ -231,7 +268,7 @@ const Tracking = () => {
                       {req.status}
                     </span>
                   </td>
-                  <td className="table-cell">
+                  <td className="table-cell hidden sm:table-cell">
                     <div className="min-w-[7rem]">
                       <div className="flex justify-between text-xs text-text-light mb-1">
                         <span>{req.progress}%</span>
@@ -244,14 +281,14 @@ const Tracking = () => {
                       </div>
                     </div>
                   </td>
-                  <td className="table-cell whitespace-nowrap">{req.submittedDate}</td>
+                  <td className="table-cell whitespace-nowrap hidden lg:table-cell">{req.submittedDate}</td>
                   <td className="table-cell">
                     <button
                       type="button"
-                      className="text-sm font-medium text-primary hover:text-primary-light transition-colors duration-200"
+                      className="text-sm font-medium text-primary hover:text-primary-light transition-colors duration-200 min-h-[44px] px-2"
                       onClick={() => selectRequest(req)}
                     >
-                      View Tracking
+                      View
                     </button>
                   </td>
                 </tr>
@@ -268,7 +305,6 @@ const Tracking = () => {
           </table>
         </div>
       </div>
-
     </div>
   )
 }

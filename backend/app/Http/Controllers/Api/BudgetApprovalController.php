@@ -4,16 +4,20 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\BudgetApprovalStep;
+use App\Models\BudgetRequest;
 use App\Models\User;
 use App\Services\BudgetRequestWorkflow;
+use App\Services\NotificationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class BudgetApprovalController extends Controller
 {
-    public function __construct(private BudgetRequestWorkflow $requestWorkflow)
-    {
+    public function __construct(
+        private BudgetRequestWorkflow $requestWorkflow,
+        private NotificationService $notifications
+    ) {
     }
 
     private const DEFAULT_STEPS = [
@@ -72,7 +76,18 @@ class BudgetApprovalController extends Controller
         }
 
         $this->maybeCompleteWorkflow();
+
+        $affectedRequests = BudgetRequest::query()
+            ->where('status', '!=', 'rejected')
+            ->with(['steps', 'creator'])
+            ->get()
+            ->filter(fn (BudgetRequest $r) => $this->requestWorkflow->currentApprovableStep($r)?->name === $step->name);
+
         $this->requestWorkflow->syncApprovedStep($step->name);
+
+        foreach ($affectedRequests as $request) {
+            $this->notifications->notifyStepApproved($request->fresh(['steps', 'creator']), $step->name);
+        }
 
         $steps = BudgetApprovalStep::query()
             ->orderBy('sort_order')

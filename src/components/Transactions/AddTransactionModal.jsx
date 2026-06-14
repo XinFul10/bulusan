@@ -4,7 +4,6 @@ import { XMarkIcon } from '@heroicons/react/24/outline'
 import { transactionService, dashboardService } from '../../services/transactionService'
 import toast from 'react-hot-toast'
 
-const abTests = ['T1', 'T2', 'T3', 'None']
 const defaultCategories = [
   { id: 1, name: 'Capacity Development' },
   { id: 2, name: 'TM & Promotions' },
@@ -22,14 +21,12 @@ const AddTransactionModal = ({ isOpen, onClose, onSuccess, editData = null }) =>
       description: editData.description,
       category_id: editData.category_id ? editData.category_id.toString() : '',
       custom_category: '',
-      a_b_test: editData.a_b_test || 'None',
       allocated_amount: editData.allocated_amount,
       obligated_amount: editData.obligated_amount
     } : {
       date: new Date().toISOString().split('T')[0],
       category_id: '',
       custom_category: '',
-      a_b_test: 'None',
       allocated_amount: '',
       obligated_amount: ''
     }
@@ -77,7 +74,6 @@ const AddTransactionModal = ({ isOpen, onClose, onSuccess, editData = null }) =>
         description: data.description,
         category_id: data.category_id ? parseInt(data.category_id) : null,
         custom_category: data.custom_category || null,
-        a_b_test: data.a_b_test || null,
         allocated_amount: Number(data.allocated_amount) || 0,
         obligated_amount: Number(data.obligated_amount) || 0
       }
@@ -88,6 +84,7 @@ const AddTransactionModal = ({ isOpen, onClose, onSuccess, editData = null }) =>
       } else {
         await transactionService.create(payload)
         toast.success('Transaction created successfully')
+        window.dispatchEvent(new Event('notifications:refresh'))
       }
       
       reset()
@@ -119,10 +116,10 @@ const AddTransactionModal = ({ isOpen, onClose, onSuccess, editData = null }) =>
       />
       
       {/* Modal */}
-      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto mx-2 sm:mx-0">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-text-dark">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
+          <h2 className="text-lg sm:text-xl font-semibold text-text-dark">
             {editData ? 'Edit Transaction' : 'New Transaction'}
           </h2>
           <button
@@ -134,7 +131,7 @@ const AddTransactionModal = ({ isOpen, onClose, onSuccess, editData = null }) =>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit(onSubmit)} onKeyDown={handleKeyDown} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} onKeyDown={handleKeyDown} className="p-4 sm:p-6 space-y-4">
           {/* Date */}
           <div>
             <label className="block text-sm font-medium text-text-dark mb-1">
@@ -218,20 +215,8 @@ const AddTransactionModal = ({ isOpen, onClose, onSuccess, editData = null }) =>
             )}
           </div>
 
-          {/* A/B Test */}
-          <div>
-            <label className="block text-sm font-medium text-text-dark mb-1">
-              A/B Test
-            </label>
-            <select {...register('a_b_test')} className="input-field">
-              {abTests.map(test => (
-                <option key={test} value={test === 'None' ? '' : test}>{test}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Amounts */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Amounts — single column on mobile, 2 columns on sm+ */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-text-dark mb-1">
                 Allocated (₱) <span className="text-danger">*</span>

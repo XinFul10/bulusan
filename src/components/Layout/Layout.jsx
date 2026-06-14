@@ -15,7 +15,7 @@ const Layout = () => {
       />
       <div className={`flex-1 flex flex-col transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} ml-0`}>
         <Header />
-        <main className="flex-1 p-4 sm:p-6 overflow-auto">
+        <main className="flex-1 p-4 sm:p-5 md:p-6 overflow-x-hidden overflow-y-auto min-w-0">
           <Outlet />
         </main>
         <Footer />

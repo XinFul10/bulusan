@@ -11,7 +11,6 @@ class Transaction extends Model
         'transaction_date',
         'description',
         'category_id',
-        'a_b_test',
         'allocated_amount',
         'obligated_amount',
         'created_by',

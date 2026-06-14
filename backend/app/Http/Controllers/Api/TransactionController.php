@@ -8,21 +8,24 @@ use App\Models\BudgetRequest;
 use App\Models\Category;
 use App\Models\Transaction;
 use App\Services\BudgetRequestWorkflow;
+use App\Services\NotificationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
 class TransactionController extends Controller
 {
-    public function __construct(private BudgetRequestWorkflow $workflow)
-    {
+    public function __construct(
+        private BudgetRequestWorkflow $workflow,
+        private NotificationService $notifications
+    ) {
     }
 
     public function index()
     {
         $transactions = Transaction::query()
             ->where('is_visible_in_transactions', true)
-            ->with(['category:id,name', 'creator:id,full_name'])
+            ->with(['category:id,name', 'creator:id,full_name', 'budgetRequest:id,request_number'])
             ->orderByDesc('transaction_date')
             ->orderByDesc('id')
             ->get();
@@ -34,11 +37,12 @@ class TransactionController extends Controller
             'category_id' => $t->category_id,
             'category_name' => $t->category?->name,
             'creator_name' => $t->creator?->full_name,
-            'a_b_test' => $t->a_b_test,
             'allocated_amount' => (int) $t->allocated_amount,
             'obligated_amount' => (int) $t->obligated_amount,
             'balance' => (int) max(0, ((int) $t->allocated_amount) - ((int) $t->obligated_amount)),
             'created_by' => $t->created_by,
+            'budget_request_id' => $t->budget_request_id,
+            'request_id' => $t->budgetRequest?->request_number,
             'created_at' => $t->created_at?->toIso8601String(),
         ]);
 
@@ -111,7 +115,6 @@ class TransactionController extends Controller
             'description' => ['required', 'string', 'max:255'],
             'category_id' => ['nullable', 'integer', 'exists:categories,id', 'required_without:custom_category'],
             'custom_category' => ['nullable', 'string', 'max:255', 'required_without:category_id'],
-            'a_b_test' => ['nullable', 'string', 'max:50'],
             'allocated_amount' => ['required', 'integer', 'min:0'],
             'obligated_amount' => ['nullable', 'integer', 'min:0'],
         ]);
@@ -151,6 +154,8 @@ class TransactionController extends Controller
 
         $this->workflow->createStepsForRequest($budgetRequest);
 
+        $this->notifications->notifyNewSubmission($budgetRequest->fresh('creator'));
+
         $transaction = Transaction::create([
             ...$data,
             'created_by' => $request->user()->id,
@@ -166,7 +171,6 @@ class TransactionController extends Controller
                 'category_id' => $transaction->category_id,
                 'category_name' => $transaction->category?->name,
                 'creator_name' => $transaction->creator?->full_name,
-                'a_b_test' => $transaction->a_b_test,
                 'allocated_amount' => (int) $transaction->allocated_amount,
                 'obligated_amount' => (int) $transaction->obligated_amount,
                 'balance' => (int) max(0, ((int) $transaction->allocated_amount) - ((int) $transaction->obligated_amount)),
@@ -183,7 +187,6 @@ class TransactionController extends Controller
             'description' => ['sometimes', 'string', 'max:255'],
             'category_id' => ['sometimes', 'nullable', 'integer', 'exists:categories,id', 'required_without:custom_category'],
             'custom_category' => ['sometimes', 'nullable', 'string', 'max:255', 'required_without:category_id'],
-            'a_b_test' => ['nullable', 'string', 'max:50'],
             'allocated_amount' => ['sometimes', 'integer', 'min:0'],
             'obligated_amount' => ['sometimes', 'integer', 'min:0'],
         ]);
@@ -227,7 +230,6 @@ class TransactionController extends Controller
                 'category_id' => $transaction->category_id,
                 'category_name' => $transaction->category?->name,
                 'creator_name' => $transaction->creator?->full_name,
-                'a_b_test' => $transaction->a_b_test,
                 'allocated_amount' => (int) $transaction->allocated_amount,
                 'obligated_amount' => (int) $transaction->obligated_amount,
                 'balance' => (int) max(0, ((int) $transaction->allocated_amount) - ((int) $transaction->obligated_amount)),

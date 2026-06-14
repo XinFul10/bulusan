@@ -7,13 +7,16 @@ use App\Models\BudgetRequest;
 use App\Models\BudgetRequestStep;
 use App\Models\User;
 use App\Services\BudgetRequestWorkflow;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class BudgetRequestController extends Controller
 {
-    public function __construct(private BudgetRequestWorkflow $workflow)
-    {
+    public function __construct(
+        private BudgetRequestWorkflow $workflow,
+        private NotificationService $notifications
+    ) {
     }
 
     public function index(Request $request)
@@ -75,8 +78,54 @@ class BudgetRequestController extends Controller
         $this->workflow->completeIfAllApproved($budgetRequest->fresh('steps'));
         $this->workflow->refreshRequestMeta($budgetRequest->fresh('steps'));
 
+        $freshRequest = $budgetRequest->fresh(['steps', 'creator']);
+        $this->notifications->notifyStepApproved($freshRequest, $step->name);
+
         return response()->json([
             'message' => 'Approval recorded',
+            'data' => $this->workflow->formatRequest($freshRequest),
+        ]);
+    }
+
+    public function rejectStep(Request $request, BudgetRequest $budgetRequest, BudgetRequestStep $budgetRequestStep)
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'max:1000'],
+        ]);
+
+        if (!$this->canViewAllRequests($user)) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $step = $budgetRequest->steps()->find($budgetRequestStep->id);
+
+        if (!$step) {
+            return response()->json(['message' => 'Approval step not found'], 404);
+        }
+
+        if (in_array($step->name, ['Budget Requested', 'Completed'], true)) {
+            return response()->json(['message' => 'This step cannot be rejected'], 422);
+        }
+
+        if (!$this->canApproveStep($user, $step)) {
+            return response()->json(['message' => 'You are not authorized to reject this step'], 403);
+        }
+
+        $current = $this->workflow->currentApprovableStep($budgetRequest->fresh('steps'));
+
+        if ($user->role !== 'admin' && (!$current || $current->id !== $step->id)) {
+            return response()->json(['message' => 'This step is not awaiting approval'], 422);
+        }
+
+        $budgetRequest->forceFill(['status' => 'rejected'])->save();
+
+        $this->notifications->notifyRejection($budgetRequest->fresh('creator'), $step->name, $data['reason']);
+
+        return response()->json([
+            'message' => 'Request rejected',
             'data' => $this->workflow->formatRequest($budgetRequest->fresh(['steps', 'creator'])),
         ]);
     }
