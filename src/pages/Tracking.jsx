@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import BudgetProgressStepper, { getActiveStepIndex } from '../components/Tracking/BudgetProgressStepper'
-import RequestTrackingModal from '../components/Tracking/RequestTrackingModal'
 import { useAuth } from '../context/AuthContext'
 import { approvalService, requestService } from '../services/transactionService'
 import { getStatusClass } from '../utils/requestStatus'
@@ -40,16 +39,25 @@ const Tracking = () => {
   const [loading, setLoading] = useState(true)
   const [approving, setApproving] = useState(false)
   const [selectedRequest, setSelectedRequest] = useState(null)
-  const [modalOpen, setModalOpen] = useState(false)
 
-  const activeStepIndex = useMemo(() => getActiveStepIndex(departments), [departments])
-  const currentStep = departments[activeStepIndex] ?? null
+  const timelineDepartments = useMemo(
+    () => selectedRequest?.departments || departments,
+    [departments, selectedRequest]
+  )
+
+  const activeStepIndex = useMemo(() => getActiveStepIndex(timelineDepartments), [timelineDepartments])
+  const currentStep = useMemo(
+    () => timelineDepartments[activeStepIndex] ?? null,
+    [timelineDepartments, activeStepIndex]
+  )
 
   const canApprove = useMemo(() => {
     if (!currentStep || currentStep.approved) return false
     if (['Budget Requested', 'Completed'].includes(currentStep.name)) return false
     return departmentCanApprove(user, currentStep.name)
   }, [currentStep, user])
+
+  const timelineCanApprove = canApprove
 
   const loadApprovalSteps = useCallback(async () => {
     const response = await approvalService.getSteps()
@@ -60,12 +68,6 @@ const Tracking = () => {
     const response = await requestService.getAll()
     setRequests(response.data || [])
   }, [])
-
-  useEffect(() => {
-    if (!modalOpen || !selectedRequest) return
-    const updated = requests.find((r) => r.id === selectedRequest.id)
-    if (updated) setSelectedRequest(updated)
-  }, [requests, modalOpen, selectedRequest?.id])
 
   useEffect(() => {
     const load = async () => {
@@ -87,11 +89,13 @@ const Tracking = () => {
   }, [loadApprovalSteps, loadRequests])
 
   const handleApprove = async () => {
-    if (!currentStep?.id) return
+    const approvalStep = departments.find((step) => step.name === currentStep?.name)
+
+    if (!approvalStep?.id) return
 
     setApproving(true)
     try {
-      const response = await approvalService.approve(currentStep.id)
+      const response = await approvalService.approve(approvalStep.id)
       setDepartments(response.data || [])
       await loadRequests()
       toast.success('Approval recorded')
@@ -104,14 +108,14 @@ const Tracking = () => {
     }
   }
 
-  const openTrackingModal = (request) => {
-    setSelectedRequest(request)
-    setModalOpen(true)
-  }
-
-  const closeTrackingModal = () => {
-    setModalOpen(false)
-    setSelectedRequest(null)
+  const selectRequest = async (request) => {
+    try {
+      const response = await requestService.getById(request.id)
+      setSelectedRequest(response.data || request)
+    } catch (error) {
+      console.error('Failed to load request tracking details', error)
+      setSelectedRequest(request)
+    }
   }
 
   const inReviewCount = useMemo(
@@ -139,10 +143,26 @@ const Tracking = () => {
       </div>
 
       <div className="card py-8 px-6">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-text-dark">Request Timeline</h2>
+            <p className="text-sm text-text-light">
+              {selectedRequest
+                ? `Showing approval stages for ${selectedRequest.requestId || selectedRequest.id}.`
+                : 'Select a request to view its approval flow and progress.'}
+            </p>
+          </div>
+          {selectedRequest && (
+            <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+              Active request: {selectedRequest.requestId || selectedRequest.id}
+            </span>
+          )}
+        </div>
+
         <BudgetProgressStepper
-          departments={departments}
+          departments={timelineDepartments}
           onApprove={handleApprove}
-          canApprove={canApprove}
+          canApprove={timelineCanApprove}
           approving={approving}
         />
       </div>
@@ -172,8 +192,21 @@ const Tracking = () => {
             </thead>
             <tbody className="divide-y divide-gray-200 bg-card">
               {requests.map((req, idx) => (
-                <tr key={req.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                  <td className="table-cell font-medium whitespace-nowrap">{req.id}</td>
+                <tr
+                  key={req.id}
+                  className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ${
+                    selectedRequest?.id === req.id ? 'ring-1 ring-primary/30 bg-primary/5' : ''
+                  }`}
+                >
+                  <td className="table-cell font-medium whitespace-nowrap">
+                    <button
+                      type="button"
+                      className="text-primary hover:text-primary-light transition-colors duration-200 underline-offset-2 hover:underline"
+                      onClick={() => selectRequest(req)}
+                    >
+                      {req.id}
+                    </button>
+                  </td>
                   <td className="table-cell">
                     <span className="block max-w-[14rem] truncate" title={req.title}>
                       {req.title}
@@ -206,7 +239,7 @@ const Tracking = () => {
                     <button
                       type="button"
                       className="text-sm font-medium text-primary hover:text-primary-light transition-colors duration-200"
-                      onClick={() => openTrackingModal(req)}
+                      onClick={() => selectRequest(req)}
                     >
                       View Tracking
                     </button>
@@ -226,11 +259,6 @@ const Tracking = () => {
         </div>
       </div>
 
-      <RequestTrackingModal
-        isOpen={modalOpen}
-        onClose={closeTrackingModal}
-        request={selectedRequest}
-      />
     </div>
   )
 }
