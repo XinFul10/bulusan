@@ -6,16 +6,17 @@ import {
   ChartBarIcon,
   DocumentTextIcon,
   UsersIcon,
-  BuildingLibraryIcon,
   Bars3Icon,
   XMarkIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  ClipboardDocumentListIcon
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../../context/AuthContext'
+import bulusanLogo from '../../public/bulusan-logo.png'
 
 const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
-  const { isAdmin } = useAuth()
+  const { isAdmin, isHeadOfTourism } = useAuth()
   const [isMobileOpen, setIsMobileOpen] = useState(false)
 
   const menuItems = [
@@ -24,6 +25,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
     { path: '/tracking', name: 'Tracking', icon: ChartBarIcon },
     { path: '/reports', name: 'Reports', icon: DocumentTextIcon },
     ...(isAdmin() ? [{ path: '/users', name: 'User Management', icon: UsersIcon }] : []),
+    ...(isAdmin() || isHeadOfTourism() ? [{ path: '/system-logs', name: 'System Logs', icon: ClipboardDocumentListIcon }] : []),
   ]
 
   return (
@@ -48,7 +50,13 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
         <div className={`p-4 border-b border-primary-light/30 ${isCollapsed ? 'flex flex-col items-center gap-2' : ''}`}>
           <div className={`flex items-center ${isCollapsed ? 'flex-col gap-2' : 'justify-between gap-3'}`}>
             <div className={`flex items-center gap-3 ${isCollapsed ? 'justify-center' : ''}`}>
-              <BuildingLibraryIcon className="w-8 h-8 shrink-0" />
+              <div className={`rounded-full overflow-hidden ${isCollapsed ? 'w-12 h-12' : 'w-14 h-14'} flex-shrink-0 bg-white/10`}>
+                <img 
+                  src={bulusanLogo} 
+                  alt="Municipality of Bulusan Logo" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
               {!isCollapsed && (
                 <div>
                   <h1 className="font-bold text-sm leading-tight">Municipality of</h1>
@@ -95,7 +103,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
 
         <div className="p-4 border-t border-primary-light/30">
           {!isCollapsed && (
-            <p className="text-xs text-blue-200 text-center">Fiscal Year 2026</p>
+            <p className="text-xs text-blue-200 text-center">Year 2026</p>
           )}
         </div>
       </aside>

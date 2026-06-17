@@ -21,6 +21,7 @@ const BudgetProgressStepper = ({
   onApprove,
   canApprove = false,
   approving = false,
+  approveLabel = 'Approve',
   className = '',
 }) => {
   const activeIndex = useMemo(() => getActiveStepIndex(departments), [departments])
@@ -125,7 +126,7 @@ const BudgetProgressStepper = ({
             onClick={onApprove}
             disabled={approving}
           >
-            {approving ? 'Approving…' : 'Approve'}
+            {approving ? 'Approving…' : approveLabel}
           </button>
         </div>
       )}

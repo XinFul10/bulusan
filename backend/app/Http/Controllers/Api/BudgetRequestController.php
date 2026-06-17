@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\BudgetRequest;
 use App\Models\BudgetRequestStep;
 use App\Models\User;
+use App\Models\SystemLog;
 use App\Services\BudgetRequestWorkflow;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
@@ -66,7 +67,7 @@ class BudgetRequestController extends Controller
 
         $current = $this->workflow->currentApprovableStep($budgetRequest->fresh('steps'));
 
-        if ($user->role !== 'admin' && (!$current || $current->id !== $step->id)) {
+        if (!$current || $current->id !== $step->id) {
             return response()->json(['message' => 'This step is not awaiting approval'], 422);
         }
 
@@ -80,6 +81,17 @@ class BudgetRequestController extends Controller
 
         $freshRequest = $budgetRequest->fresh(['steps', 'creator']);
         $this->notifications->notifyStepApproved($freshRequest, $step->name);
+
+        // Log approval
+        SystemLog::log(
+            $user->id,
+            'APPROVE',
+            'BudgetRequest',
+            "Approved step '{$step->name}' for request {$budgetRequest->request_number}",
+            $budgetRequest->id,
+            ['step' => $step->name, 'request_number' => $budgetRequest->request_number],
+            $request
+        );
 
         return response()->json([
             'message' => 'Approval recorded',
@@ -150,7 +162,7 @@ class BudgetRequestController extends Controller
             return false;
         }
 
-        if ($user->role === 'admin') {
+        if ($user->role === 'head of tourism') {
             return true;
         }
 
@@ -193,7 +205,7 @@ class BudgetRequestController extends Controller
 
     private function canViewAllRequests(User $user): bool
     {
-        if ($user->role === 'admin') {
+        if ($user->role === 'admin' || $user->role === 'head of tourism') {
             return true;
         }
 

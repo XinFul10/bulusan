@@ -90,12 +90,15 @@ export const AuthProvider = ({ children }) => {
 
   const isAdmin = () => user?.role === 'admin'
 
+  const isHeadOfTourism = () => user?.role === 'head of tourism'
+
   const value = {
     user,
     setUser,
     login,
     logout,
     isAdmin,
+    isHeadOfTourism,
     loading
   }
 

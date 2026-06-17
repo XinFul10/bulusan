@@ -7,14 +7,14 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-class BudgetApprovalAdminTest extends TestCase
+class BudgetApprovalHeadOfTourismTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_admin_cannot_bulk_approve_budget_stages(): void
+    public function test_head_of_tourism_approves_one_step_at_a_time(): void
     {
-        $admin = User::factory()->create([
-            'role' => 'admin',
+        $head = User::factory()->create([
+            'role' => 'head of tourism',
             'status' => 'active',
         ]);
 
@@ -32,11 +32,11 @@ class BudgetApprovalAdminTest extends TestCase
             'approved_at' => null,
         ]);
 
-        $response = $this->actingAs($admin, 'sanctum')
+        $response = $this->actingAs($head, 'sanctum')
             ->postJson("/api/budget/approval-steps/{$first->id}/approve");
 
-        $response->assertForbidden();
-        $this->assertFalse($first->fresh()->approved);
+        $response->assertOk();
+        $this->assertTrue($first->fresh()->approved);
         $this->assertFalse($second->fresh()->approved);
     }
 }

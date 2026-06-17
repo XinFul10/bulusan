@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\SystemLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -51,7 +52,7 @@ class UserController extends Controller
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'username' => ['required', 'string', 'max:50', 'unique:users,username'],
             'password' => ['required', 'string', 'min:6'],
-            'role' => ['required', 'in:admin,staff'],
+            'role' => ['required', 'in:admin,staff,head of tourism'],
             'department' => ['nullable', 'string', 'max:255'],
         ]);
 
@@ -65,6 +66,23 @@ class UserController extends Controller
             'department' => $data['department'] ?? null,
         ]);
 
+        // Log account creation
+        SystemLog::log(
+            $request->user()->id,
+            'CREATE',
+            'User',
+            "Created new account: {$user->username} ({$user->full_name}) with role {$user->role}",
+            $user->id,
+            [
+                'username' => $data['username'],
+                'full_name' => $data['full_name'],
+                'email' => $data['email'],
+                'role' => $data['role'],
+                'department' => $data['department'] ?? null,
+            ],
+            $request
+        );
+
         return response()->json(['data' => $this->formatUser($user)], 201);
     }
 
@@ -75,17 +93,50 @@ class UserController extends Controller
         $data = $request->validate([
             'full_name' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'email', 'max:255', 'unique:users,email,'.$user->id],
-            'role' => ['sometimes', 'in:admin,staff'],
+            'role' => ['sometimes', 'in:admin,staff,head of tourism'],
             'status' => ['sometimes', 'in:active,inactive'],
             'password' => ['sometimes', 'string', 'min:6'],
             'department' => ['sometimes', 'nullable', 'string', 'max:255'],
         ]);
 
+        $changes = [];
+        $originalData = $user->getAttributes();
+
         if (isset($data['password'])) {
             $data['password'] = Hash::make($data['password']);
+            $changes['password'] = 'Password changed';
+        }
+
+        if (isset($data['full_name']) && $data['full_name'] !== $user->full_name) {
+            $changes['full_name'] = ['from' => $user->full_name, 'to' => $data['full_name']];
+        }
+        if (isset($data['email']) && $data['email'] !== $user->email) {
+            $changes['email'] = ['from' => $user->email, 'to' => $data['email']];
+        }
+        if (isset($data['role']) && $data['role'] !== $user->role) {
+            $changes['role'] = ['from' => $user->role, 'to' => $data['role']];
+        }
+        if (isset($data['status']) && $data['status'] !== $user->status) {
+            $changes['status'] = ['from' => $user->status, 'to' => $data['status']];
+        }
+        if (isset($data['department']) && $data['department'] !== $user->department) {
+            $changes['department'] = ['from' => $user->department, 'to' => $data['department']];
         }
 
         $user->fill($data)->save();
+
+        // Log profile update if there are changes
+        if (!empty($changes)) {
+            SystemLog::log(
+                $request->user()->id,
+                'UPDATE',
+                'User',
+                "Updated account: {$user->username} ({$user->full_name})",
+                $user->id,
+                $changes,
+                $request
+            );
+        }
 
         return response()->json(['data' => $this->formatUser($user)]);
     }

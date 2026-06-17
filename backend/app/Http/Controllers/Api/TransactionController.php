@@ -7,6 +7,7 @@ use App\Models\Budget;
 use App\Models\BudgetRequest;
 use App\Models\Category;
 use App\Models\Transaction;
+use App\Models\SystemLog;
 use App\Services\BudgetRequestWorkflow;
 use App\Services\NotificationService;
 use Carbon\Carbon;
@@ -162,6 +163,23 @@ class TransactionController extends Controller
             'budget_request_id' => $budgetRequest->id,
             'is_visible_in_transactions' => false,
         ])->load(['category:id,name', 'creator:id,full_name']);
+
+        // Log transaction creation
+        SystemLog::log(
+            $request->user()->id,
+            'CREATE',
+            'Transaction',
+            "Added new transaction: {$transaction->description}",
+            $transaction->id,
+            [
+                'transaction_date' => $transaction->transaction_date,
+                'description' => $transaction->description,
+                'category' => $transaction->category?->name,
+                'allocated_amount' => $transaction->allocated_amount,
+                'obligated_amount' => $transaction->obligated_amount,
+            ],
+            $request
+        );
 
         return response()->json([
             'data' => [
