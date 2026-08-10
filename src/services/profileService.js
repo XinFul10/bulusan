@@ -14,9 +14,7 @@ export const profileService = {
   uploadAvatar: async (file) => {
     const form = new FormData()
     form.append('avatar', file)
-    const response = await api.post('/me/avatar', form, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
+    const response = await api.post('/me/avatar', form)
     return response.data
   }
 }
