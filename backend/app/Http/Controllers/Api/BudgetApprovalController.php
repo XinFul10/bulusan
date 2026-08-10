@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\BudgetApprovalStep;
 use App\Models\BudgetRequest;
 use App\Models\User;
+use App\Models\SystemLog;
 use App\Services\BudgetRequestWorkflow;
 use App\Services\NotificationService;
 use Carbon\Carbon;
@@ -54,26 +55,15 @@ class BudgetApprovalController extends Controller
 
         $current = $this->currentApprovableStep();
 
-        if ($user->role !== 'admin' && (!$current || $current->id !== $step->id)) {
+        if (!$current || $current->id !== $step->id) {
             return response()->json(['message' => 'This step is not awaiting approval'], 422);
         }
 
-        if ($user->role === 'admin') {
-            BudgetApprovalStep::query()
-                ->where('approved', false)
-                ->whereNotIn('name', ['Completed'])
-                ->update([
-                    'approved' => true,
-                    'approved_at' => now(),
-                    'approved_by' => $user->id,
-                ]);
-        } else {
-            $step->forceFill([
-                'approved' => true,
-                'approved_at' => now(),
-                'approved_by' => $user->id,
-            ])->save();
-        }
+        $step->forceFill([
+            'approved' => true,
+            'approved_at' => now(),
+            'approved_by' => $user->id,
+        ])->save();
 
         $this->maybeCompleteWorkflow();
 
@@ -85,14 +75,25 @@ class BudgetApprovalController extends Controller
 
         $this->requestWorkflow->syncApprovedStep($step->name);
 
-        foreach ($affectedRequests as $request) {
-            $this->notifications->notifyStepApproved($request->fresh(['steps', 'creator']), $step->name);
+        foreach ($affectedRequests as $budgetRequest) {
+            $this->notifications->notifyStepApproved($budgetRequest->fresh(['steps', 'creator']), $step->name);
         }
 
         $steps = BudgetApprovalStep::query()
             ->orderBy('sort_order')
             ->get()
             ->map(fn (BudgetApprovalStep $s) => $this->formatStep($s));
+
+        // Log approval
+        SystemLog::log(
+            $user->id,
+            'APPROVE',
+            'ApprovalStep',
+            "Approved step '{$step->name}'",
+            $step->id,
+            ['step' => $step->name, 'affected_requests' => count($affectedRequests)],
+            $request
+        );
 
         return response()->json([
             'message' => 'Approval recorded',
@@ -153,7 +154,7 @@ class BudgetApprovalController extends Controller
             return false;
         }
 
-        if ($user->role === 'admin') {
+        if ($user->role === 'head of tourism') {
             return true;
         }
 

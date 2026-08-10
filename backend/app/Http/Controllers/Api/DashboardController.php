@@ -18,12 +18,10 @@ class DashboardController extends Controller
             ->orderBy('id')
             ->get();
 
-        // Only include categories with actual transactions
         $categoryStats = $categories->filter(function (Category $c) {
-            $allocated = (int) ($c->allocated ?? 0);
-            return $allocated > 0;
+            return (int) $c->allocation > 0;
         })->map(function (Category $c) {
-            $allocation = (int) ($c->allocated ?? 0);
+            $allocation = (int) $c->allocation;
             $obligated = (int) ($c->obligated ?? 0);
             $balance = max(0, $allocation - $obligated);
             $percentage = $allocation > 0 ? round(($obligated / $allocation) * 100) : 0;
@@ -38,11 +36,13 @@ class DashboardController extends Controller
             ];
         })->values();
 
-        $totalAllocated = (int) Transaction::query()->sum('allocated_amount');
         $totalObligated = (int) Transaction::query()->sum('obligated_amount');
-        
+
         $latestBudget = Budget::latest()->first();
-        $totalBudget = $latestBudget ? (float) $latestBudget->total_budget : $totalAllocated;
+        $categoryTotal = (int) Category::query()->sum('allocation');
+        $totalBudget = $latestBudget
+            ? (float) $latestBudget->total_budget
+            : ($categoryTotal > 0 ? $categoryTotal : 0);
         
         $remainingBalance = max(0, $totalBudget - $totalObligated);
         $overallUtilization = $totalBudget > 0 ? round(($totalObligated / $totalBudget) * 100, 2) : 0;

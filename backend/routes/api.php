@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\BudgetApprovalController;
 use App\Http\Controllers\Api\BudgetRequestController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\SystemLogController;
 use App\Http\Controllers\BudgetController;
 use Illuminate\Support\Facades\Route;
 
@@ -34,6 +35,7 @@ Route::put('/transactions/{transaction}', [TransactionController::class, 'update
 Route::delete('/transactions/{transaction}', [TransactionController::class, 'destroy'])->middleware('auth:sanctum');
 
 Route::get('/categories', [\App\Http\Controllers\Api\CategoryController::class, 'index'])->middleware('auth:sanctum');
+Route::put('/categories/allocations', [\App\Http\Controllers\Api\CategoryController::class, 'updateAllocations'])->middleware('auth:sanctum');
 
 Route::get('/users', [UserController::class, 'index'])->middleware('auth:sanctum');
 Route::post('/users', [UserController::class, 'store'])->middleware('auth:sanctum');
@@ -59,3 +61,6 @@ Route::get('/notifications', [NotificationController::class, 'index'])->middlewa
 Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount'])->middleware('auth:sanctum');
 Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->middleware('auth:sanctum');
 Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->middleware('auth:sanctum');
+
+Route::get('/system-logs', [SystemLogController::class, 'index'])->middleware('auth:sanctum');
+Route::get('/system-logs/{log}', [SystemLogController::class, 'show'])->middleware('auth:sanctum');

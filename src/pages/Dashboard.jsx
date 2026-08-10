@@ -4,17 +4,13 @@ import BudgetCard from '../components/Dashboard/BudgetCard'
 import BudgetBarChart from '../components/Dashboard/BudgetBarChart'
 import BudgetPieChart from '../components/Dashboard/BudgetPieChart'
 import AddTransactionModal from '../components/Transactions/AddTransactionModal'
-import SetBudgetModal from '../components/Dashboard/SetBudgetModal'
 import { dashboardService } from '../services/transactionService'
-import { useAuth } from '../context/AuthContext'
 import toast from 'react-hot-toast'
 
 const Dashboard = () => {
-  const { isAdmin } = useAuth()
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false)
 
   const fetchStats = useCallback(async () => {
     try {
@@ -75,7 +71,7 @@ const Dashboard = () => {
             <p className="text-blue-200 text-xs sm:text-sm mt-2">Fiscal Year Budget Allocation & Obligation Tracker</p>
           </div>
           <div className="sm:text-right">
-            <p className="text-sm text-blue-200">Current Fiscal Year</p>
+            <p className="text-sm text-blue-200">Current Year</p>
             <p className="text-2xl sm:text-3xl font-bold">2026</p>
           </div>
         </div>
@@ -83,14 +79,6 @@ const Dashboard = () => {
 
       {/* Quick Action Button */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
-        {isAdmin() && (
-          <button
-            onClick={() => setIsBudgetModalOpen(true)}
-            className="btn-secondary flex items-center justify-center gap-2 min-h-[44px] w-full sm:w-auto"
-          >
-            Set Total Budget
-          </button>
-        )}
         <button
           onClick={() => setIsModalOpen(true)}
           className="btn-primary flex items-center justify-center gap-2 min-h-[44px] w-full sm:w-auto"
@@ -240,16 +228,6 @@ const Dashboard = () => {
         onSuccess={() => {
           fetchStats()
           toast.success('Transaction added successfully')
-        }}
-      />
-
-      {/* Set Budget Modal */}
-      <SetBudgetModal
-        isOpen={isBudgetModalOpen}
-        onClose={() => setIsBudgetModalOpen(false)}
-        onSuccess={() => {
-          fetchStats()
-          toast.success('Budget updated successfully')
         }}
       />
     </div>

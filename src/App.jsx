@@ -10,6 +10,7 @@ import Tracking from './pages/Tracking'
 import Reports from './pages/Reports'
 import UserManagement from './pages/UserManagement'
 import Profile from './pages/Profile'
+import SystemLog from './pages/SystemLog'
 
 function App() {
   useEffect(() => {
@@ -42,9 +43,10 @@ function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="transactions" element={<Transactions />} />
           <Route path="tracking" element={<Tracking />} />
-          <Route path="reports" element={<Reports />} />
+          <Route path="reports" element={<ProtectedRoute adminOnly><Reports /></ProtectedRoute>} />
           <Route path="profile" element={<Profile />} />
           <Route path="users" element={<ProtectedRoute adminOnly><UserManagement /></ProtectedRoute>} />
+          <Route path="system-logs" element={<ProtectedRoute logsOnly><SystemLog /></ProtectedRoute>} />
         </Route>
       </Routes>
     </AuthProvider>

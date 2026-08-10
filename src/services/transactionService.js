@@ -47,6 +47,30 @@ export const approvalService = {
   },
 }
 
+export const categoryService = {
+  getAll: async () => {
+    const response = await api.get('/categories')
+    return response.data
+  },
+
+  updateAllocations: async (categories) => {
+    const response = await api.put('/categories/allocations', { categories })
+    return response.data
+  },
+}
+
+export const budgetService = {
+  setBudget: async (totalBudget) => {
+    const response = await api.post('/budget', { total_budget: totalBudget })
+    return response.data
+  },
+
+  getCurrentBudget: async () => {
+    const response = await api.get('/budget')
+    return response.data
+  },
+}
+
 export const requestService = {
   getAll: async () => {
     const response = await api.get('/budget/requests')
@@ -120,4 +144,16 @@ export const reportService = {
     const response = await api.delete(`/reports/${id}`)
     return response.data
   }
+}
+
+export const systemLogService = {
+  getAll: async (page = 1) => {
+    const response = await api.get('/system-logs', { params: { page } })
+    return response.data
+  },
+
+  getById: async (logId) => {
+    const response = await api.get(`/system-logs/${logId}`)
+    return response.data
+  },
 }

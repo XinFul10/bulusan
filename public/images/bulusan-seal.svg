@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" class="w-full h-full">
+  <defs>
+    <style>
+      .rope-text { font-family: Arial, sans-serif; font-size: 32px; font-weight: bold; fill: #000; letter-spacing: 2px; }
+      .banner-text { font-family: Arial, sans-serif; font-size: 28px; font-weight: bold; fill: white; letter-spacing: 1px; }
+    </style>
+  </defs>
+  
+  <!-- Outer rope border -->
+  <circle cx="200" cy="200" r="195" fill="white" stroke="#8B7355" stroke-width="8" stroke-dasharray="15,8" stroke-linecap="round"/>
+  <circle cx="200" cy="200" r="188" fill="none" stroke="#333" stroke-width="2"/>
+  
+  <!-- Main background -->
+  <circle cx="200" cy="200" r="185" fill="#F0E6D2"/>
+  
+  <!-- Shield halves background -->
+  <path d="M 200 35 L 365 165 L 365 280 Q 200 350 200 350 Q 200 350 35 280 L 35 165 Z" fill="none" stroke="#333" stroke-width="2"/>
+  
+  <!-- Blue shield section (left) -->
+  <path d="M 200 50 L 200 200 L 35 165 L 35 280 Q 117.5 330 200 350 Q 200 350 200 200 Z" fill="#0047AB" opacity="0.8"/>
+  
+  <!-- Red shield section (right) -->
+  <path d="M 200 50 L 200 200 L 365 165 L 365 280 Q 282.5 330 200 350 Q 200 350 200 200 Z" fill="#DC143C" opacity="0.8"/>
+  
+  <!-- Central circle for landscape -->
+  <circle cx="200" cy="200" r="100" fill="white" stroke="#333" stroke-width="3"/>
+  
+  <!-- Sky gradient effect -->
+  <circle cx="200" cy="140" r="70" fill="#87CEEB" opacity="0.6"/>
+  
+  <!-- Landscape - Mountain -->
+  <path d="M 140 200 L 165 130 L 190 150 L 220 100 L 250 145 L 280 200" fill="#2D5016" opacity="0.8"/>
+  
+  <!-- Water -->
+  <ellipse cx="200" cy="200" rx="95" ry="40" fill="#1E90FF" opacity="0.6"/>
+  <path d="M 140 200 Q 160 205 200 205 Q 240 205 260 200" fill="#4169E1" opacity="0.5"/>
+  
+  <!-- Vegetation -->
+  <path d="M 155 180 Q 160 165 165 180" fill="#228B22" opacity="0.7"/>
+  <path d="M 230 185 Q 235 170 240 185" fill="#228B22" opacity="0.7"/>
+  
+  <!-- Helm/Steering wheel - Golden yellow -->
+  <circle cx="200" cy="130" r="45" fill="#FFD700" stroke="#333" stroke-width="2"/>
+  
+  <!-- Helm spokes (8 points) -->
+  <g stroke="#333" stroke-width="3" stroke-linecap="round">
+    <line x1="200" y1="85" x2="200" y2="175"/>
+    <line x1="200" y1="85" x2="200" y2="175"/>
+    <line x1="145" y1="130" x2="255" y2="130"/>
+    <line x1="162" y1="93" x2="238" y2="167"/>
+    <line x1="162" y1="167" x2="238" y2="93"/>
+  </g>
+  
+  <!-- Helm center circle -->
+  <circle cx="200" cy="130" r="8" fill="#333"/>
+  
+  <!-- Stars -->
+  <g fill="#FFD700" stroke="#333" stroke-width="1">
+    <!-- Top star -->
+    <circle cx="200" cy="60" r="6"/>
+    <!-- Left star -->
+    <circle cx="120" cy="130" r="5"/>
+    <!-- Right star -->
+    <circle cx="280" cy="130" r="5"/>
+  </g>
+  
+  <!-- Lower banner shield section -->
+  <rect x="110" y="310" width="180" height="50" fill="#0047AB" stroke="#333" stroke-width="2" rx="5"/>
+  <text x="200" y="345" class="banner-text" text-anchor="middle">BULUSAN LAKE</text>
+  
+  <!-- Laurel wreaths (left) -->
+  <g fill="#228B22" opacity="0.7">
+    <path d="M 80 300 Q 75 320 80 340" stroke="#228B22" stroke-width="3" fill="none"/>
+    <circle cx="82" cy="310" r="3"/>
+    <circle cx="80" cy="325" r="3"/>
+    <circle cx="82" cy="335" r="3"/>
+  </g>
+  
+  <!-- Laurel wreaths (right) -->
+  <g fill="#228B22" opacity="0.7">
+    <path d="M 320 300 Q 325 320 320 340" stroke="#228B22" stroke-width="3" fill="none"/>
+    <circle cx="318" cy="310" r="3"/>
+    <circle cx="320" cy="325" r="3"/>
+    <circle cx="318" cy="335" r="3"/>
+  </g>
+  
+  <!-- Outer text path circles -->
+  <defs>
+    <path id="topCircle" d="M 80,200 A 120,120 0 0,1 320,200" fill="none"/>
+    <path id="bottomCircle" d="M 80,200 A 120,120 0 0,0 320,200" fill="none"/>
+  </defs>
+  
+  <!-- Top arc text -->
+  <text font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#000" letter-spacing="3">
+    <textPath href="#topCircle" startOffset="50%" text-anchor="middle">
+      BULUSAN 9
+    </textPath>
+  </text>
+  
+  <!-- Bottom arc text -->
+  <text font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#000" letter-spacing="3">
+    <textPath href="#bottomCircle" startOffset="50%" text-anchor="middle">
+      SORSOGON
+    </textPath>
+  </text>
+  
+  <!-- Decorative border dots -->
+  <g fill="#333" opacity="0.3">
+    <circle cx="50" cy="200" r="3"/>
+    <circle cx="350" cy="200" r="3"/>
+    <circle cx="200" cy="50" r="3"/>
+    <circle cx="200" cy="350" r="3"/>
+  </g>
+</svg>

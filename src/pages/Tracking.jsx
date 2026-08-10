@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import BudgetProgressStepper, { getActiveStepIndex } from '../components/Tracking/BudgetProgressStepper'
 import { useAuth } from '../context/AuthContext'
-import { approvalService, requestService } from '../services/transactionService'
+import { approvalService, requestService, categoryService } from '../services/transactionService'
 import { getStatusClass } from '../utils/requestStatus'
 import { scrollToElement } from '../utils/notificationNavigation'
 
@@ -11,7 +11,7 @@ const normalize = (value) => (value ?? '').trim().toLowerCase()
 
 const departmentCanApprove = (user, stepName) => {
   if (!user || !stepName) return false
-  if (user.role === 'admin') return true
+  if (user.role === 'head of tourism') return true
   if (!user.department) return false
 
   const userDept = normalize(user.department)
@@ -35,7 +35,7 @@ const departmentCanApprove = (user, stepName) => {
 }
 
 const Tracking = () => {
-  const { user } = useAuth()
+  const { user, isHeadOfTourism } = useAuth()
   const [searchParams] = useSearchParams()
   const requestIdParam = searchParams.get('requestId')
   const [requests, setRequests] = useState([])
@@ -43,6 +43,10 @@ const Tracking = () => {
   const [loading, setLoading] = useState(true)
   const [approving, setApproving] = useState(false)
   const [selectedRequest, setSelectedRequest] = useState(null)
+  const [showBudgetForm, setShowBudgetForm] = useState(false)
+  const [categories, setCategories] = useState([])
+  const [categoryAllocations, setCategoryAllocations] = useState({})
+  const [settingBudget, setSettingBudget] = useState(false)
   const rowRefs = useRef({})
   const timelineRef = useRef(null)
   const handledRequestId = useRef(null)
@@ -66,6 +70,15 @@ const Tracking = () => {
 
   const timelineCanApprove = canApprove
 
+  const loadCategories = useCallback(async () => {
+    const response = await categoryService.getAll()
+    const items = response.data || []
+    setCategories(items)
+    setCategoryAllocations(
+      Object.fromEntries(items.map((cat) => [cat.id, cat.allocation ?? 0]))
+    )
+  }, [])
+
   const loadApprovalSteps = useCallback(async () => {
     const response = await approvalService.getSteps()
     setDepartments(response.data || [])
@@ -80,7 +93,11 @@ const Tracking = () => {
     const load = async () => {
       try {
         setLoading(true)
-        await Promise.all([loadApprovalSteps(), loadRequests()])
+        const tasks = [loadApprovalSteps(), loadRequests()]
+        if (isHeadOfTourism()) {
+          tasks.push(loadCategories())
+        }
+        await Promise.all(tasks)
       } catch (e) {
         toast.error('Failed to load tracking data')
       } finally {
@@ -93,7 +110,7 @@ const Tracking = () => {
     const handleRefresh = () => load()
     window.addEventListener('refreshData', handleRefresh)
     return () => window.removeEventListener('refreshData', handleRefresh)
-  }, [loadApprovalSteps, loadRequests])
+  }, [loadApprovalSteps, loadRequests, loadCategories, isHeadOfTourism])
 
   const selectRequest = useCallback(async (request) => {
     try {
@@ -139,6 +156,7 @@ const Tracking = () => {
         await loadRequests()
         toast.success('Approval recorded')
         window.dispatchEvent(new Event('notifications:refresh'))
+        window.dispatchEvent(new Event('refreshData'))
         return
       }
 
@@ -156,6 +174,44 @@ const Tracking = () => {
       toast.error(message)
     } finally {
       setApproving(false)
+    }
+  }
+
+  const totalCategoryBudget = useMemo(
+    () => Object.values(categoryAllocations).reduce((sum, value) => sum + (parseFloat(value) || 0), 0),
+    [categoryAllocations]
+  )
+
+  const handleSetBudget = async (e) => {
+    e.preventDefault()
+
+    const payload = categories.map((cat) => ({
+      id: cat.id,
+      allocation: parseFloat(categoryAllocations[cat.id]) || 0,
+    }))
+
+    if (payload.some((item) => item.allocation < 0)) {
+      toast.error('Please enter valid budget amounts')
+      return
+    }
+
+    if (payload.every((item) => item.allocation === 0)) {
+      toast.error('Set at least one category budget')
+      return
+    }
+
+    setSettingBudget(true)
+    try {
+      await categoryService.updateAllocations(payload)
+      toast.success('Category budgets saved successfully')
+      setShowBudgetForm(false)
+      await loadCategories()
+      window.dispatchEvent(new Event('refreshData'))
+    } catch (e) {
+      const message = e.response?.data?.error || 'Failed to set budget'
+      toast.error(message)
+    } finally {
+      setSettingBudget(false)
     }
   }
 
@@ -210,8 +266,94 @@ const Tracking = () => {
           onApprove={handleApprove}
           canApprove={timelineCanApprove}
           approving={approving}
+          approveLabel="Approve"
         />
       </div>
+
+      {isHeadOfTourism() && (
+        <div className="card py-6 sm:py-8 px-4 sm:px-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h2 className="text-base sm:text-lg font-semibold text-text-dark">Set Budget</h2>
+              <p className="text-sm text-text-light mt-1">
+                As Head of Tourism, you can set the budget for all categories
+              </p>
+            </div>
+            {!showBudgetForm && (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBudgetForm(true)
+                  loadCategories()
+                }}
+                className="self-start sm:self-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors duration-200 font-medium text-sm"
+              >
+                Set Category Budgets
+              </button>
+            )}
+          </div>
+
+          {showBudgetForm && (
+            <form onSubmit={handleSetBudget} className="mt-6">
+              <div className="space-y-4">
+                {categories.map((cat) => (
+                  <div key={cat.id} className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 sm:items-center">
+                    <label htmlFor={`budget-cat-${cat.id}`} className="text-sm font-medium text-text-dark">
+                      {cat.name}
+                    </label>
+                    <input
+                      id={`budget-cat-${cat.id}`}
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={categoryAllocations[cat.id] ?? ''}
+                      onChange={(e) =>
+                        setCategoryAllocations((prev) => ({
+                          ...prev,
+                          [cat.id]: e.target.value,
+                        }))
+                      }
+                      placeholder="0"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    />
+                  </div>
+                ))}
+
+                <div className="pt-2 border-t border-gray-200">
+                  <p className="text-sm text-text-light">
+                    Total budget:{' '}
+                    <span className="font-semibold text-text-dark">
+                      {new Intl.NumberFormat('en-PH', {
+                        style: 'currency',
+                        currency: 'PHP',
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0,
+                      }).format(totalCategoryBudget)}
+                    </span>
+                  </p>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={settingBudget}
+                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:bg-gray-400 transition-colors duration-200 font-medium text-sm"
+                  >
+                    {settingBudget ? 'Saving...' : 'Save Category Budgets'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowBudgetForm(false)}
+                    className="px-4 py-2 bg-gray-200 text-text-dark rounded-lg hover:bg-gray-300 transition-colors duration-200 font-medium text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </form>
+          )}
+        </div>
+      )}
 
       <div>
         <h2 className="text-base sm:text-lg font-semibold text-text-dark mb-1">Request Progress</h2>

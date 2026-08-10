@@ -41,6 +41,18 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+        User::query()->firstOrCreate(
+            ['username' => 'head_of_tourism'],
+            [
+                'full_name' => 'Head of Tourism',
+                'email' => 'head_of_tourism@bulusan.gov.ph',
+                'password' => Hash::make('headoftourism1234!'),
+                'role' => 'head of tourism',
+                'status' => 'active',
+                'department' => 'Office of the Municipal Tourism Office',
+            ]
+        );
+
         $officeAccounts = [
             [
                 'username' => 'department_head',
