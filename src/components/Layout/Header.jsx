@@ -9,7 +9,7 @@ import { useAuth } from '../../context/AuthContext'
 import NotificationDropdown from './NotificationDropdown'
 
 const Header = () => {
-  const { user, logout, isAdmin } = useAuth()
+  const { user, setUser, logout, isAdmin } = useAuth()
   const navigate = useNavigate()
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
@@ -42,6 +42,14 @@ const Header = () => {
                 src={user.avatar_url}
                 alt="Profile"
                 className="w-8 h-8 rounded-full object-cover border border-gray-200"
+                key={user.avatar_url}
+                onError={() => {
+                  // Wipe the stale URL so the initials div renders instead of a broken white circle
+                  setUser((prev) => (prev ? { ...prev, avatar_url: null } : prev))
+                  const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
+                  delete storedUser.avatar_url
+                  localStorage.setItem('user', JSON.stringify(storedUser))
+                }}
               />
             ) : (
               <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white font-semibold text-sm">

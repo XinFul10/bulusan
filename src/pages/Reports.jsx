@@ -3,7 +3,7 @@ import { DocumentArrowDownIcon, PrinterIcon, EyeIcon, TrashIcon, ArrowPathIcon }
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
 import { format } from 'date-fns'
 import jsPDF from 'jspdf'
-import 'jspdf-autotable'
+import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
 import toast from 'react-hot-toast'
 import { reportService } from '../services/transactionService'
@@ -172,7 +172,7 @@ const Reports = () => {
       `${((item.obligated / item.allocated) * 100).toFixed(1)}%`
     ])
     
-    doc.autoTable({
+    autoTable(doc, {
       head: [['Category', 'Allocated', 'Obligated', 'Balance', 'Utilization']],
       body: tableData,
       startY: 60,
