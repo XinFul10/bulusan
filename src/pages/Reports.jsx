@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { DocumentArrowDownIcon, PrinterIcon, EyeIcon, TrashIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
 import { format } from 'date-fns'
-import jsPDF from 'jspdf'
-import 'jspdf-autotable'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
 import toast from 'react-hot-toast'
 import { reportService } from '../services/transactionService'
@@ -164,35 +164,47 @@ const Reports = () => {
     doc.text(`Category: ${report.category}`, 14, 52)
     
     // Table
-    const tableData = report.data.map(item => [
-      item.name,
-      formatCurrency(item.allocated),
-      formatCurrency(item.obligated),
-      formatCurrency(item.allocated - item.obligated),
-      `${((item.obligated / item.allocated) * 100).toFixed(1)}%`
-    ])
-    
-    doc.autoTable({
+    const tableData = (report.data || []).map(item => {
+      const allocated = Number(item.allocated) || 0
+      const obligated = Number(item.obligated) || 0
+      const balance = Math.max(0, allocated - obligated)
+      const utilization = allocated > 0 ? `${((obligated / allocated) * 100).toFixed(1)}%` : '0%'
+      return [
+        item.name,
+        formatCurrency(allocated),
+        formatCurrency(obligated),
+        formatCurrency(balance),
+        utilization
+      ]
+    })
+
+    autoTable(doc, {
       head: [['Category', 'Allocated', 'Obligated', 'Balance', 'Utilization']],
       body: tableData,
       startY: 60,
       styles: { fontSize: 9 },
       headStyles: { fillColor: [30, 58, 138] }
     })
-    
+
     doc.save(`report_${report.type}_${safeFormatDate(report.generatedAt, 'yyyyMMdd')}.pdf`)
     toast.success('PDF downloaded')
   }
 
   const downloadExcel = (report) => {
-    const data = report.data.map(item => ({
-      Category: item.name,
-      Allocated: item.allocated,
-      Obligated: item.obligated,
-      Balance: item.allocated - item.obligated,
-      Utilization: `${((item.obligated / item.allocated) * 100).toFixed(1)}%`
-    }))
-    
+    const data = (report.data || []).map(item => {
+      const allocated = Number(item.allocated) || 0
+      const obligated = Number(item.obligated) || 0
+      const balance = Math.max(0, allocated - obligated)
+      const utilization = allocated > 0 ? `${((obligated / allocated) * 100).toFixed(1)}%` : '0%'
+      return {
+        Category: item.name,
+        Allocated: allocated,
+        Obligated: obligated,
+        Balance: balance,
+        Utilization: utilization
+      }
+    })
+
     const ws = XLSX.utils.json_to_sheet(data)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Report')

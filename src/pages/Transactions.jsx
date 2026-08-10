@@ -15,8 +15,8 @@ import AddTransactionModal from '../components/Transactions/AddTransactionModal'
 import { transactionService } from '../services/transactionService'
 import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'
-import jsPDF from 'jspdf'
-import 'jspdf-autotable'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import { scrollToElement } from '../utils/notificationNavigation'
 
 const defaultCategories = [
@@ -223,7 +223,7 @@ const Transactions = () => {
       formatCurrency(t.balance)
     ])
 
-    doc.autoTable({
+    autoTable(doc, {
       head: [['Date', 'Description', 'Category', 'Allocated', 'Obligated', 'Balance']],
       body: tableData,
       startY: 35,
