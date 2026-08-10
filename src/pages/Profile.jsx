@@ -3,6 +3,12 @@ import toast from 'react-hot-toast'
 import { useAuth } from '../context/AuthContext'
 import { profileService } from '../services/profileService'
 
+// Append a timestamp query param so the browser never serves a cached avatar
+const bustCache = (url) => {
+  if (!url || url.startsWith('blob:')) return url
+  return `${url}?t=${Date.now()}`
+}
+
 const Profile = () => {
   const { user, setUser, loading: authLoading } = useAuth()
   const [saving, setSaving] = useState(false)
@@ -35,22 +41,19 @@ const Profile = () => {
     const load = async () => {
       try {
         const res = await profileService.getMe()
-        const nextAvatarUrl = res?.data?.avatar_url || user?.avatar_url || null
+        // Only trust the server — never use the stale localStorage value as fallback.
+        // Using user?.avatar_url here would re-trigger this effect (user is a dep)
+        // and keep re-applying a broken URL in a loop.
+        const rawUrl = res?.data?.avatar_url ?? null
+        const nextAvatarUrl = rawUrl ? bustCache(rawUrl) : null
 
         setAvatarUrl(nextAvatarUrl)
-
-        if (res?.data?.avatar_url) {
-          const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
-          const updatedUser = { ...storedUser, avatar_url: res.data.avatar_url }
-          localStorage.setItem('user', JSON.stringify(updatedUser))
-          setUser((prev) => (prev ? { ...prev, avatar_url: res.data.avatar_url } : prev))
-        }
       } catch {
         // ignore; page still usable with local user info
       }
     }
     if (!authLoading && user) load()
-  }, [authLoading, user, setUser])
+  }, [authLoading, user?.id])  // depend only on user.id — not the whole object — to avoid re-running when setUser updates avatar_url
 
   const handleSave = async (e) => {
     e.preventDefault()
@@ -98,8 +101,8 @@ const Profile = () => {
     if (!file) return
 
     const previousAvatarUrl = avatarUrl
+    // Show an instant local preview while the upload is in flight
     const previewUrl = URL.createObjectURL(file)
-
     setAvatarUrl(previewUrl)
 
     try {
@@ -107,17 +110,24 @@ const Profile = () => {
       const res = await profileService.uploadAvatar(file)
       const nextAvatarUrl = res?.data?.avatar_url || null
 
-      setAvatarUrl(nextAvatarUrl)
-
       if (nextAvatarUrl) {
+        // Add cache-busting so the browser fetches the new image, not the cached one
+        const bustedUrl = bustCache(nextAvatarUrl)
+        setAvatarUrl(bustedUrl)
+
+        // Persist with cache-busted URL so Header and other consumers re-render correctly
         const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
-        const updatedUser = { ...storedUser, avatar_url: nextAvatarUrl }
+        const updatedUser = { ...storedUser, avatar_url: bustedUrl }
         localStorage.setItem('user', JSON.stringify(updatedUser))
-        setUser((prev) => (prev ? { ...prev, avatar_url: nextAvatarUrl } : prev))
+        setUser((prev) => (prev ? { ...prev, avatar_url: bustedUrl } : prev))
+      } else {
+        // Server didn't return a URL — keep the local blob preview and warn
+        console.warn('Avatar upload succeeded but no avatar_url returned from server')
       }
 
       toast.success('Profile picture updated')
     } catch (err) {
+      // Roll back to the previous avatar on failure
       setAvatarUrl(previousAvatarUrl)
       toast.error(err?.response?.data?.message || 'Failed to upload profile picture')
     } finally {
@@ -155,6 +165,16 @@ const Profile = () => {
                   src={avatarUrl}
                   alt="Profile"
                   className="w-20 h-20 rounded-full object-cover border border-gray-200"
+                  key={avatarUrl}
+                  onError={() => {
+                    // Clear stale URL from state, localStorage, and user context
+                    // so nothing can re-apply it after the image fails to load
+                    setAvatarUrl(null)
+                    setUser((prev) => (prev ? { ...prev, avatar_url: null } : prev))
+                    const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
+                    delete storedUser.avatar_url
+                    localStorage.setItem('user', JSON.stringify(storedUser))
+                  }}
                 />
               ) : (
                 <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-white font-semibold text-2xl">

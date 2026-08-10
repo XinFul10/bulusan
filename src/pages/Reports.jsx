@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { DocumentArrowDownIcon, PrinterIcon, EyeIcon, TrashIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
 import { format } from 'date-fns'
-import { jsPDF } from 'jspdf'
+
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
 import toast from 'react-hot-toast'
@@ -164,19 +164,6 @@ const Reports = () => {
     doc.text(`Category: ${report.category}`, 14, 52)
     
     // Table
-    const tableData = (report.data || []).map(item => {
-      const allocated = Number(item.allocated) || 0
-      const obligated = Number(item.obligated) || 0
-      const balance = Math.max(0, allocated - obligated)
-      const utilization = allocated > 0 ? `${((obligated / allocated) * 100).toFixed(1)}%` : '0%'
-      return [
-        item.name,
-        formatCurrency(allocated),
-        formatCurrency(obligated),
-        formatCurrency(balance),
-        utilization
-      ]
-    })
 
     autoTable(doc, {
       head: [['Category', 'Allocated', 'Obligated', 'Balance', 'Utilization']],
