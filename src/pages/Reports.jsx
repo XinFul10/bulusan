@@ -48,7 +48,7 @@ const mockLineData = [
   { month: 'Jun', budget: 580000, actual: 560000 }
 ]
 
-const COLORS = ['#1E3A8A', '#3B82F6', '#10B981', '#F59E0B']
+const COLORS = ['#0E3642', '#22626B', '#10B981', '#F59E0B']
 
 const Reports = () => {
   const [selectedReport, setSelectedReport] = useState('budget_summary')
@@ -233,7 +233,7 @@ const Reports = () => {
                 <YAxis tickFormatter={(val) => `₱${val/1000}K`} />
                 <Tooltip formatter={(val) => formatCurrency(val)} />
                 <Legend />
-                <Bar dataKey="allocated" fill="#1E3A8A" />
+                <Bar dataKey="allocated" fill="#0E3642" />
                 <Bar dataKey="obligated" fill="#EF4444" />
               </BarChart>
             </ResponsiveContainer>
@@ -250,7 +250,7 @@ const Reports = () => {
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
-                  fill="#8884d8"
+                  fill="#22626B"
                   dataKey="allocated"
                   label
                 >
@@ -275,7 +275,7 @@ const Reports = () => {
                 <YAxis tickFormatter={(val) => `₱${val/1000}K`} />
                 <Tooltip formatter={(val) => formatCurrency(val)} />
                 <Legend />
-                <Line type="monotone" dataKey="budget" stroke="#1E3A8A" />
+                <Line type="monotone" dataKey="budget" stroke="#0E3642" />
                 <Line type="monotone" dataKey="actual" stroke="#EF4444" />
               </LineChart>
             </ResponsiveContainer>

@@ -70,9 +70,9 @@ const ObligationChart = () => {
               type="monotone" 
               dataKey="planned" 
               name="Planned" 
-              stroke="#1E3A8A" 
+              stroke="#0E3642" 
               strokeWidth={2}
-              dot={{ fill: '#1E3A8A', strokeWidth: 0, r: 4 }}
+              dot={{ fill: '#0E3642', strokeWidth: 0, r: 4 }}
               strokeDasharray="5 5"
             />
             <Line 

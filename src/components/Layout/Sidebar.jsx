@@ -43,7 +43,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
       </button>
 
       <aside
-        className={`fixed left-0 top-0 h-screen bg-primary text-white flex flex-col transition-all duration-300 z-40
+        className={`fixed left-0 top-0 h-screen bg-gradient-to-b from-primary-darker via-primary-dark to-primary text-white flex flex-col transition-all duration-300 z-40
           ${isCollapsed ? 'w-20' : 'w-64'}
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
@@ -67,7 +67,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
             <button
               type="button"
               onClick={onToggleCollapse}
-              className="hidden rounded-md p-2 text-blue-100 hover:bg-white/10 hover:text-white transition-colors lg:inline-flex items-center justify-center"
+              className="hidden rounded-md p-2 text-white/80 hover:bg-white/10 hover:text-white transition-colors lg:inline-flex items-center justify-center"
               aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               {isCollapsed ? (
@@ -77,7 +77,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
               )}
             </button>
           </div>
-          {!isCollapsed && <p className="text-xs mt-2 text-blue-200">OMTO</p>}
+          {!isCollapsed && <p className="text-xs mt-2 text-white/60">OMTO</p>}
         </div>
 
         <nav className="flex-1 px-4 py-6 space-y-1">
@@ -91,7 +91,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
                 ${isCollapsed ? 'justify-center' : ''}
                 ${isActive
                   ? 'bg-white/20 text-white font-medium'
-                  : 'text-blue-100 hover:bg-white/10 hover:text-white'
+                  : 'text-white/80 hover:bg-white/10 hover:text-white'
                 }`
               }
             >
@@ -103,7 +103,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
 
         <div className="p-4 border-t border-primary-light/30">
           {!isCollapsed && (
-            <p className="text-xs text-blue-200 text-center">Year 2026</p>
+            <p className="text-xs text-white/60 text-center">Year 2026</p>
           )}
         </div>
       </aside>

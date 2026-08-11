@@ -58,7 +58,7 @@
 
 @layer utilities {
   .text-gradient {
-    @apply bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-primary-dark via-primary to-primary-light bg-clip-text text-transparent;
   }
 
   .notification-dropdown-enter {

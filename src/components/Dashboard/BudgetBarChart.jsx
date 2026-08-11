@@ -83,7 +83,7 @@ const BudgetBarChart = ({ data }) => {
             <Legend
               wrapperStyle={{ fontSize: isMobile ? 12 : 14, paddingTop: 8 }}
             />
-            <Bar dataKey="Allocation" fill="#1E3A8A" radius={[4, 4, 0, 0]} maxBarSize={isMobile ? 32 : 48} />
+            <Bar dataKey="Allocation" fill="#0E3642" radius={[4, 4, 0, 0]} maxBarSize={isMobile ? 32 : 48} />
             <Bar dataKey="Obligation" fill="#EF4444" radius={[4, 4, 0, 0]} maxBarSize={isMobile ? 32 : 48} />
           </BarChart>
         </ResponsiveContainer>

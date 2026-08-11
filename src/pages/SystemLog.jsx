@@ -6,14 +6,14 @@ import { format } from 'date-fns'
 
 const actionColors = {
   CREATE: 'bg-green-50 text-green-800',
-  UPDATE: 'bg-blue-50 text-blue-800',
+  UPDATE: 'bg-primary/10 text-primary',
   DELETE: 'bg-red-50 text-red-800',
   APPROVE: 'bg-purple-50 text-purple-800',
 }
 
 const actionBadgeColors = {
   CREATE: 'bg-green-100 text-green-800',
-  UPDATE: 'bg-blue-100 text-blue-800',
+  UPDATE: 'bg-primary/20 text-primary-dark',
   DELETE: 'bg-red-100 text-red-800',
   APPROVE: 'bg-purple-100 text-purple-800',
 }

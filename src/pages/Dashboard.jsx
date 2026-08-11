@@ -63,15 +63,15 @@ const Dashboard = () => {
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header Section — stacks on mobile (≤768px) */}
-      <div className="card bg-gradient-to-r from-primary to-primary-light text-white p-4 sm:p-6">
+      <div className="card bg-gradient-to-r from-primary-darker via-primary-dark to-primary-light text-white p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
           <div>
             <h1 className="text-lg sm:text-2xl font-bold">MUNICIPALITY OF BULUSAN</h1>
-            <p className="text-blue-100 mt-1 text-sm sm:text-base">Office of the Municipal Tourism Office (OMTO)</p>
-            <p className="text-blue-200 text-xs sm:text-sm mt-2">Fiscal Year Budget Allocation & Obligation Tracker</p>
+            <p className="text-white/80 mt-1 text-sm sm:text-base">Office of the Municipal Tourism Office (OMTO)</p>
+            <p className="text-white/60 text-xs sm:text-sm mt-2">Fiscal Year Budget Allocation & Obligation Tracker</p>
           </div>
           <div className="sm:text-right">
-            <p className="text-sm text-blue-200">Current Year</p>
+            <p className="text-sm text-white/60">Current Year</p>
             <p className="text-2xl sm:text-3xl font-bold">2026</p>
           </div>
         </div>
@@ -91,7 +91,7 @@ const Dashboard = () => {
       {/* Summary Cards — 1 col mobile, 2 col tablet, 4 col desktop */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="card bg-primary text-white !p-4 sm:!p-6">
-          <p className="text-blue-200 text-sm">Total Budget</p>
+          <p className="text-white/60 text-sm">Total Budget</p>
           <p className="text-lg sm:text-2xl font-bold mt-1 break-words">{formatCurrency(stats?.total_budget || 0)}</p>
         </div>
         <div className="card bg-danger text-white !p-4 sm:!p-6">
