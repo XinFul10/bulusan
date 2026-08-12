@@ -8,6 +8,12 @@ import {
 import { useAuth } from '../../context/AuthContext'
 import NotificationDropdown from './NotificationDropdown'
 
+// Apply cache-busting to avatar URLs for fresh loads
+const bustAvatarCache = (url) => {
+  if (!url || url.startsWith('blob:')) return url
+  return `${url}?t=${Date.now()}`
+}
+
 const Header = () => {
   const { user, setUser, logout, isAdmin } = useAuth()
   const navigate = useNavigate()
@@ -39,7 +45,7 @@ const Header = () => {
           >
             {user?.avatar_url ? (
               <img
-                src={user.avatar_url}
+                src={bustAvatarCache(user.avatar_url)}
                 alt="Profile"
                 className="w-8 h-8 rounded-full object-cover border border-gray-200"
                 key={user.avatar_url}

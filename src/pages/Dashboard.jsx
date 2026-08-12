@@ -91,20 +91,20 @@ const Dashboard = () => {
       {/* Summary Cards — 1 col mobile, 2 col tablet, 4 col desktop */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="card bg-primary text-white !p-4 sm:!p-6">
-          <p className="text-white/60 text-sm">Total Budget</p>
-          <p className="text-lg sm:text-2xl font-bold mt-1 break-words">{formatCurrency(stats?.total_budget || 0)}</p>
+          <p className="text-white/60 text-xs sm:text-sm">Total Budget</p>
+          <p className="text-base sm:text-2xl font-bold mt-1 break-words min-w-0">{formatCurrency(stats?.total_budget || 0)}</p>
         </div>
         <div className="card bg-danger text-white !p-4 sm:!p-6">
-          <p className="text-red-200 text-sm">Total Obligated</p>
-          <p className="text-lg sm:text-2xl font-bold mt-1 break-words">{formatCurrency(stats?.total_obligated || 0)}</p>
+          <p className="text-red-200 text-xs sm:text-sm">Total Obligated</p>
+          <p className="text-base sm:text-2xl font-bold mt-1 break-words min-w-0">{formatCurrency(stats?.total_obligated || 0)}</p>
         </div>
         <div className="card bg-success text-white !p-4 sm:!p-6">
-          <p className="text-green-200 text-sm">Remaining Balance</p>
-          <p className="text-lg sm:text-2xl font-bold mt-1 break-words">{formatCurrency(stats?.remaining_balance || 0)}</p>
+          <p className="text-green-200 text-xs sm:text-sm">Remaining Balance</p>
+          <p className="text-base sm:text-2xl font-bold mt-1 break-words min-w-0">{formatCurrency(stats?.remaining_balance || 0)}</p>
         </div>
         <div className="card bg-warning text-white !p-4 sm:!p-6">
-          <p className="text-yellow-200 text-sm">Overall Utilization</p>
-          <p className="text-lg sm:text-2xl font-bold mt-1">{stats?.overall_utilization || 0}%</p>
+          <p className="text-yellow-200 text-xs sm:text-sm">Overall Utilization</p>
+          <p className="text-base sm:text-2xl font-bold mt-1">{stats?.overall_utilization || 0}%</p>
         </div>
       </div>
 

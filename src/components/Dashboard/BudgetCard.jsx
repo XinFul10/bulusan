@@ -30,11 +30,11 @@ const BudgetCard = ({ category, allocation, obligated, balance, percentage }) =>
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className="flex sm:block justify-between items-center sm:items-start gap-2 border-b border-gray-100 sm:border-0 pb-3 sm:pb-0 last:border-0 last:pb-0"
+            className="flex flex-col sm:block gap-1 border-b border-gray-100 sm:border-0 pb-3 sm:pb-0 last:border-0 last:pb-0"
           >
             <p className="text-xs sm:text-xs text-text-light uppercase tracking-wider">{stat.label}</p>
-            <div className="text-right sm:text-left">
-              <p className={`text-base sm:text-lg font-bold ${stat.color}`}>{stat.value}</p>
+            <div className="sm:text-left">
+              <p className={`text-base sm:text-lg font-bold ${stat.color} break-words min-w-0`}>{stat.value}</p>
               {stat.sub && <p className="text-xs text-text-light">{stat.sub}</p>}
             </div>
           </div>

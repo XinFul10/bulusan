@@ -41,13 +41,10 @@ const Profile = () => {
     const load = async () => {
       try {
         const res = await profileService.getMe()
-        // Only trust the server — never use the stale localStorage value as fallback.
-        // Using user?.avatar_url here would re-trigger this effect (user is a dep)
-        // and keep re-applying a broken URL in a loop.
+        // Store raw URL (no cache-bust) so it persists across restarts
+        // Cache-bust will be applied at render time for fresh loads
         const rawUrl = res?.data?.avatar_url ?? null
-        const nextAvatarUrl = rawUrl ? bustCache(rawUrl) : null
-
-        setAvatarUrl(nextAvatarUrl)
+        setAvatarUrl(rawUrl)
       } catch {
         // ignore; page still usable with local user info
       }
@@ -111,15 +108,15 @@ const Profile = () => {
       const nextAvatarUrl = res?.data?.avatar_url || null
 
       if (nextAvatarUrl) {
-        // Add cache-busting so the browser fetches the new image, not the cached one
-        const bustedUrl = bustCache(nextAvatarUrl)
-        setAvatarUrl(bustedUrl)
-
-        // Persist with cache-busted URL so Header and other consumers re-render correctly
+        // Store raw URL in localStorage and user context (no cache-bust)
+        // Cache-bust will be applied at render time for fresh loads
         const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
-        const updatedUser = { ...storedUser, avatar_url: bustedUrl }
+        const updatedUser = { ...storedUser, avatar_url: nextAvatarUrl }
         localStorage.setItem('user', JSON.stringify(updatedUser))
-        setUser((prev) => (prev ? { ...prev, avatar_url: bustedUrl } : prev))
+        setUser((prev) => (prev ? { ...prev, avatar_url: nextAvatarUrl } : prev))
+
+        // Set raw URL to state; render will apply cache-bust
+        setAvatarUrl(nextAvatarUrl)
       } else {
         // Server didn't return a URL — keep the local blob preview and warn
         console.warn('Avatar upload succeeded but no avatar_url returned from server')
@@ -162,7 +159,7 @@ const Profile = () => {
             <div className="flex items-center gap-4">
               {avatarUrl ? (
                 <img
-                  src={avatarUrl}
+                  src={bustCache(avatarUrl)}
                   alt="Profile"
                   className="w-20 h-20 rounded-full object-cover border border-gray-200"
                   key={avatarUrl}
