@@ -18,6 +18,7 @@ class Report extends Model
         'category',
         'data',
         'created_by',
+        'verification_code',
     ];
 
     protected $casts = [

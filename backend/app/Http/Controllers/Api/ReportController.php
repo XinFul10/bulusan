@@ -11,17 +11,12 @@ use Illuminate\Support\Facades\Auth;
 
 class ReportController extends Controller
 {
-    // List all reports (admin sees all, staff sees only their own)
+    // List all reports (all authenticated users can see all reports)
     public function index(Request $request)
     {
         $user = $request->user();
         
         $query = Report::query()->with('creator');
-        
-        // If not admin, only show own reports
-        if ($user->role !== 'admin') {
-            $query->where('created_by', $user->id);
-        }
         
         $reports = $query->orderBy('created_at', 'desc')->get();
         
@@ -39,6 +34,7 @@ class ReportController extends Controller
                     'id' => $r->creator->id,
                     'full_name' => $r->creator->full_name,
                 ],
+                'verification_code' => $r->verification_code,
             ]),
         ]);
     }
@@ -52,6 +48,7 @@ class ReportController extends Controller
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date'],
             'category' => ['nullable', 'string'],
+            'verification_code' => ['nullable', 'string'],
         ]);
 
         // Calculate real report data from transactions
@@ -81,6 +78,7 @@ class ReportController extends Controller
                     'id' => $request->user()->id,
                     'full_name' => $request->user()->full_name,
                 ],
+                'verification_code' => $report->verification_code,
             ],
         ], 201);
     }

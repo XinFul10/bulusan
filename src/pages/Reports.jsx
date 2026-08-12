@@ -8,6 +8,7 @@ import * as XLSX from 'xlsx'
 import toast from 'react-hot-toast'
 import { reportService } from '../services/transactionService'
 import { generateReportCode, isValidReportCode } from '../utils/reportCodeGenerator'
+import { useAuth } from '../context/AuthContext'
 
 const reportTypes = [
   { value: 'budget_summary', label: 'Budget Summary' },
@@ -51,6 +52,7 @@ const mockLineData = [
 const COLORS = ['#0E3642', '#22626B', '#10B981', '#F59E0B']
 
 const Reports = () => {
+  const { user, isAdmin } = useAuth()
   const [selectedReport, setSelectedReport] = useState('budget_summary')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
@@ -143,7 +145,7 @@ const Reports = () => {
         generatedAt: savedReport.generated_at,
         data: savedReport.data,
         createdBy: savedReport.created_by,
-        verificationCode: savedReport.verification_code || generatedCode
+        verificationCode: savedReport.verification_code
       }
       
       setPreviewData(report)
@@ -460,16 +462,18 @@ const Reports = () => {
                         >
                           <DocumentArrowDownIcon className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            deleteReport(report.id)
-                          }}
-                          className="p-1 text-danger hover:bg-danger/10 rounded"
-                          title="Delete"
-                        >
-                          <TrashIcon className="w-4 h-4" />
-                        </button>
+                        {(isAdmin() || report.createdBy?.id === user?.id) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              deleteReport(report.id)
+                            }}
+                            className="p-1 text-danger hover:bg-danger/10 rounded"
+                            title="Delete"
+                          >
+                            <TrashIcon className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
