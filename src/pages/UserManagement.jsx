@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { PlusIcon, PencilIcon, TrashIcon, KeyIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '../context/AuthContext'
 import { userService } from '../services/transactionService'
+import PasswordResetModal from '../components/PasswordResetModal'
 import toast from 'react-hot-toast'
 
 const emptyFormData = {
@@ -21,6 +22,9 @@ const UserManagement = () => {
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingUser, setEditingUser] = useState(null)
   const [formData, setFormData] = useState(emptyFormData)
+  const [showPasswordResetModal, setShowPasswordResetModal] = useState(false)
+  const [selectedUserForReset, setSelectedUserForReset] = useState(null)
+  const [resettingPassword, setResettingPassword] = useState(false)
 
   useEffect(() => {
     fetchUsers()
@@ -103,19 +107,31 @@ const UserManagement = () => {
     }
   }
 
-  const handleResetPassword = async (id) => {
-    const newPassword = prompt('Enter new password (min 6 characters):')
-    if (!newPassword || newPassword.length < 6) {
-      toast.error('Password must be at least 6 characters')
-      return
-    }
+  const handleResetPasswordClick = (user) => {
+    setSelectedUserForReset(user)
+    setShowPasswordResetModal(true)
+  }
+
+  const handleResetPasswordConfirm = async (newPassword) => {
+    if (!selectedUserForReset) return
     
+    setResettingPassword(true)
     try {
-      await userService.update(id, { password: newPassword })
+      await userService.update(selectedUserForReset.id, { password: newPassword })
       toast.success('Password reset successfully')
+      setShowPasswordResetModal(false)
+      setSelectedUserForReset(null)
+      fetchUsers()
     } catch (error) {
       toast.error('Failed to reset password')
+    } finally {
+      setResettingPassword(false)
     }
+  }
+
+  const handleClosePasswordModal = () => {
+    setShowPasswordResetModal(false)
+    setSelectedUserForReset(null)
   }
 
   const startEdit = (user) => {
@@ -254,7 +270,7 @@ const UserManagement = () => {
                             <PencilIcon className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => handleResetPassword(user.id)}
+                            onClick={() => handleResetPasswordClick(user)}
                             className="p-1 text-warning hover:bg-warning/10 rounded"
                             title="Reset Password"
                           >
@@ -438,6 +454,15 @@ const UserManagement = () => {
           </div>
         </div>
       </div>
+
+      {/* Password Reset Modal */}
+      <PasswordResetModal
+        isOpen={showPasswordResetModal}
+        userName={selectedUserForReset?.full_name || ''}
+        onClose={handleClosePasswordModal}
+        onConfirm={handleResetPasswordConfirm}
+        isLoading={resettingPassword}
+      />
     </div>
   )
 }
