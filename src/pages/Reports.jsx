@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
-import { DocumentArrowDownIcon, PrinterIcon, EyeIcon, TrashIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
+import { DocumentArrowDownIcon, PrinterIcon, EyeIcon, TrashIcon, ArrowPathIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
 import { format } from 'date-fns'
 import { jsPDF } from 'jspdf'
-
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
 import toast from 'react-hot-toast'
 import { reportService } from '../services/transactionService'
+import { generateReportCode, isValidReportCode } from '../utils/reportCodeGenerator'
 
 const reportTypes = [
   { value: 'budget_summary', label: 'Budget Summary' },
@@ -59,6 +59,8 @@ const Reports = () => {
   const [previewData, setPreviewData] = useState(null)
   const [generating, setGenerating] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [verificationCode, setVerificationCode] = useState('')
+  const [verificationResult, setVerificationResult] = useState(null)
 
   // Fetch reports on load
   useEffect(() => {
@@ -79,7 +81,8 @@ const Reports = () => {
         category: report.category,
         data: report.data,
         generatedAt: report.generated_at,
-        createdBy: report.created_by // Transform snake_case to camelCase
+        createdBy: report.created_by,
+        verificationCode: report.verification_code
       }))
       setGeneratedReports(transformedReports)
     } catch (error) {
@@ -114,12 +117,15 @@ const Reports = () => {
     setGenerating(true)
     
     try {
+      const generatedCode = generateReportCode()
+      
       const newReport = {
         type: selectedReport,
         type_label: reportTypes.find(t => t.value === selectedReport)?.label,
         date_from: dateFrom || '2026-01-01',
         date_to: dateTo || format(new Date(), 'yyyy-MM-dd'),
-        category: categoryFilter || 'All'
+        category: categoryFilter || 'All',
+        verification_code: generatedCode
         // Data will be calculated by the backend based on date range and category
       }
       
@@ -136,7 +142,8 @@ const Reports = () => {
         category: savedReport.category,
         generatedAt: savedReport.generated_at,
         data: savedReport.data,
-        createdBy: savedReport.created_by
+        createdBy: savedReport.created_by,
+        verificationCode: savedReport.verification_code || generatedCode
       }
       
       setPreviewData(report)
@@ -181,6 +188,13 @@ const Reports = () => {
       headStyles: { fillColor: [30, 58, 138] }
     })
 
+    // Footer with verification code
+    const pageHeight = doc.internal.pageSize.getHeight()
+    doc.setFontSize(9)
+    doc.setTextColor(100, 100, 100)
+    doc.text(`Verification Code: ${report.verificationCode || 'N/A'}`, 14, pageHeight - 10)
+    doc.text(`This report is valid and can be verified using this code.`, 14, pageHeight - 5)
+
     doc.save(`report_${report.type}_${safeFormatDate(report.generatedAt, 'yyyyMMdd')}.pdf`)
     toast.success('PDF downloaded')
   }
@@ -201,6 +215,13 @@ const Reports = () => {
     })
 
     const ws = XLSX.utils.json_to_sheet(data)
+    
+    // Add verification code at the bottom
+    const lastRow = data.length + 3
+    ws[`A${lastRow}`] = { v: 'Verification Code:', t: 's' }
+    ws[`B${lastRow}`] = { v: report.verificationCode || 'N/A', t: 's' }
+    ws[`A${lastRow + 1}`] = { v: 'This report is valid and can be verified using this code.', t: 's' }
+    
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Report')
     XLSX.writeFile(wb, `report_${report.type}_${safeFormatDate(report.generatedAt, 'yyyyMMdd')}.xlsx`)
@@ -215,6 +236,39 @@ const Reports = () => {
       toast.success('Report deleted')
     } catch (error) {
       toast.error('Failed to delete report')
+    }
+  }
+
+  const handleVerifyCode = () => {
+    setVerificationResult(null)
+    
+    if (!verificationCode.trim()) {
+      setVerificationResult({ valid: false, message: 'Please enter a verification code' })
+      return
+    }
+
+    const found = generatedReports.find(r => 
+      r.verificationCode === verificationCode
+    )
+
+    if (found) {
+      setVerificationResult({ 
+        valid: true, 
+        message: `Valid! Report: ${found.typeLabel} (${safeFormatDate(found.generatedAt, 'MMM dd, yyyy')})`,
+        report: found
+      })
+      // Auto-load the report
+      setPreviewData(found)
+    } else if (isValidReportCode(verificationCode)) {
+      setVerificationResult({ 
+        valid: false, 
+        message: 'Code format is valid, but no matching report found in this system' 
+      })
+    } else {
+      setVerificationResult({ 
+        valid: false, 
+        message: 'Invalid code format. Use format: #XXXXXXXXXXXX (12 alphanumeric characters, case-sensitive)' 
+      })
     }
   }
 
@@ -423,6 +477,51 @@ const Reports = () => {
               )}
             </div>
           </div>
+
+          {/* Report Verification */}
+          <div className="card">
+            <h2 className="text-lg font-semibold text-text-dark mb-4">Verify Report Code</h2>
+            
+            <div className="space-y-3">
+              <p className="text-sm text-text-light">
+                Enter a report verification code to check its validity
+              </p>
+              
+              <input
+                type="text"
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value)}
+                placeholder="e.g. #aB3Cd4Ef5Gh6"
+                className="input-field"
+              />
+              
+              <button
+                onClick={handleVerifyCode}
+                className="w-full btn-primary py-2"
+              >
+                Verify Code
+              </button>
+
+              {verificationResult && (
+                <div className={`p-3 rounded-lg border ${
+                  verificationResult.valid
+                    ? 'bg-success/10 border-success/30'
+                    : 'bg-danger/10 border-danger/30'
+                }`}>
+                  <div className="flex items-start gap-2">
+                    {verificationResult.valid ? (
+                      <CheckCircleIcon className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
+                    ) : (
+                      <XCircleIcon className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
+                    )}
+                    <p className={`text-sm ${verificationResult.valid ? 'text-success' : 'text-danger'}`}>
+                      {verificationResult.message}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Report Preview */}
@@ -439,6 +538,11 @@ const Reports = () => {
                     <p className="text-sm text-primary font-medium mt-1">
                       By: {previewData.createdBy?.full_name || 'Unknown'}
                     </p>
+                    {previewData.verificationCode && (
+                      <p className="text-sm text-gray-600 mt-2 font-mono bg-gray-100 px-3 py-1 rounded inline-block">
+                        Code: {previewData.verificationCode}
+                      </p>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <button
