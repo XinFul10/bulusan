@@ -6,6 +6,7 @@ import BudgetPieChart from '../components/Dashboard/BudgetPieChart'
 import AddTransactionModal from '../components/Transactions/AddTransactionModal'
 import { dashboardService } from '../services/transactionService'
 import toast from 'react-hot-toast'
+import { SkeletonCard, SkeletonTable } from '../components/Skeleton'
 
 const Dashboard = () => {
   const [stats, setStats] = useState(null)
@@ -50,8 +51,59 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="space-y-4 sm:space-y-6">
+        {/* Header banner placeholder */}
+        <div className="card bg-primary p-4 sm:p-6">
+          <div className="flex justify-between items-start gap-4 skeleton-on-color">
+            <div className="space-y-2 flex-1">
+              <div className="skeleton-shimmer h-5 w-2/5 rounded" />
+              <div className="skeleton-shimmer h-3.5 w-3/5 rounded" />
+              <div className="skeleton-shimmer h-3 w-2/5 rounded mt-1" />
+            </div>
+            <div className="space-y-1 text-right">
+              <div className="skeleton-shimmer h-3 w-16 rounded" />
+              <div className="skeleton-shimmer h-8 w-20 rounded" />
+            </div>
+          </div>
+        </div>
+
+        {/* Quick action button ghost */}
+        <div className="flex justify-end">
+          <div className="skeleton-shimmer h-11 w-44 rounded-lg" />
+        </div>
+
+        {/* 4 stat cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <SkeletonCard variant="stat" count={4} />
+        </div>
+
+        {/* Budget by Category heading + 4 cards */}
+        <div>
+          <div className="skeleton-shimmer h-5 w-44 rounded mb-4" />
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
+            <SkeletonCard variant="category" count={4} />
+          </div>
+        </div>
+
+        {/* Recent Transactions table */}
+        <div>
+          <div className="skeleton-shimmer h-5 w-48 rounded mb-4" />
+          <div className="hidden md:block card p-0 sm:p-6 overflow-hidden">
+            <table className="w-full min-w-[600px]">
+              <thead>
+                <tr>
+                  {['Date','Description','Category','Created By','Allocated','Obligated'].map(h => (
+                    <th key={h} className="table-header">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                <SkeletonTable rows={5} cols={6}
+                  colWidths={['w-20','w-full','w-24','w-28','w-24','w-24']} />
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     )
   }

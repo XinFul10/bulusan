@@ -143,6 +143,21 @@ export const reportService = {
   delete: async (id) => {
     const response = await api.delete(`/reports/${id}`)
     return response.data
+  },
+
+  // Verify a code against ALL reports (incl. soft-deleted) via the backend.
+  // This is the authoritative check — it works even after the report is
+  // removed from the Saved Reports list.
+  verifyCode: async (code) => {
+    const response = await api.post('/reports/verify', { code })
+    return response.data
+  },
+
+  // Save/update the optional description for a report.
+  // Works for soft-deleted reports (backend uses withTrashed).
+  updateDescription: async (id, description) => {
+    const response = await api.patch(`/reports/${id}/description`, { description })
+    return response.data
   }
 }
 

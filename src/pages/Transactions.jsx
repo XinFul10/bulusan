@@ -18,6 +18,7 @@ import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { scrollToElement } from '../utils/notificationNavigation'
+import { SkeletonTable } from '../components/Skeleton'
 
 const defaultCategories = [
   { id: '', name: 'All Categories' },
@@ -347,11 +348,8 @@ const Transactions = () => {
           </thead>
           <tbody className="divide-y divide-gray-200">
             {loading ? (
-              <tr>
-                <td colSpan="8" className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                </td>
-              </tr>
+              <SkeletonTable rows={8} cols={8}
+                colWidths={['w-20','w-full','w-28','w-24','w-24','w-24','w-20','w-16']} />
             ) : paginatedData.length === 0 ? (
               <tr>
                 <td colSpan="9" className="text-center py-8 text-text-light">

@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Report extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'type',
@@ -19,6 +20,7 @@ class Report extends Model
         'data',
         'created_by',
         'verification_code',
+        'description',
     ];
 
     protected $casts = [
@@ -27,6 +29,7 @@ class Report extends Model
         'data' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 
     public function creator(): BelongsTo

@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { systemLogService } from '../services/transactionService'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
+import { SkeletonTable } from '../components/Skeleton'
 
 const actionColors = {
   CREATE: 'bg-green-50 text-green-800',
@@ -69,8 +70,30 @@ const SystemLog = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="space-y-2">
+            <div className="skeleton-shimmer h-7 w-36 rounded" />
+            <div className="skeleton-shimmer h-4 w-80 rounded" />
+          </div>
+        </div>
+        <div className="card p-0 overflow-hidden">
+          <div className="responsive-table-wrap">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead>
+                <tr>
+                  {['Timestamp','Action','User','Entity Type','Description','Details'].map(h => (
+                    <th key={h} scope="col" className="table-header">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-card">
+                <SkeletonTable rows={10} cols={6}
+                  colWidths={['w-28','w-16','w-32','w-24','w-full','w-16']} />
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     )
   }

@@ -76,3 +76,107 @@
     transform: translateY(0) scale(1);
   }
 }
+
+/* ─── Skeleton shimmer ──────────────────────────────────────────────────────
+   Uses a moving gradient so it works on any background.
+   The base colour is expressed as a CSS variable so dark-mode
+   or custom themes can override it by setting --skeleton-base.
+   ─────────────────────────────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+@layer components {
+  .skeleton-shimmer {
+    /* Fallback base colour — matches the app's #F3F4F6 background */
+    --skeleton-base:      #E2E6EA;
+    --skeleton-highlight: #F3F6F9;
+
+    background: linear-gradient(
+      90deg,
+      var(--skeleton-base)      25%,
+      var(--skeleton-highlight) 50%,
+      var(--skeleton-base)      75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+    border-radius: 0.25rem;
+  }
+
+  /* Dark surface override: set on a wrapping element or body in dark mode */
+  .dark .skeleton-shimmer,
+  [data-theme="dark"] .skeleton-shimmer {
+    --skeleton-base:      rgba(255,255,255,0.08);
+    --skeleton-highlight: rgba(255,255,255,0.15);
+  }
+
+  /* Coloured card override (primary / danger / success / warning cards) */
+  .skeleton-on-color .skeleton-shimmer {
+    --skeleton-base:      rgba(255,255,255,0.15);
+    --skeleton-highlight: rgba(255,255,255,0.30);
+  }
+}
+
+/* ─── Print styles ──────────────────────────────────────────────────────────
+   Cleans up the layout for paper and PDF printing.
+   Hides navigation, sidebars, interactive controls, and form inputs.
+   ─────────────────────────────────────────────────────────────────────────── */
+@media print {
+  /* Hide sidebar, header, footer, and any no-print marked element */
+  nav,
+  aside,
+  header,
+  footer,
+  .no-print,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Reset body and root backgrounds */
+  body, html {
+    background: #ffffff !important;
+    color: #111827 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 12pt;
+  }
+
+  /* Reset layout structure */
+  .min-h-screen,
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+    display: block !important;
+    width: 100% !important;
+    min-height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Card styling reset for paper */
+  .card {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    background: transparent !important;
+  }
+
+  /* Ensure colors and backgrounds print accurately */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Prevent page breaks inside table rows and critical blocks */
+  tr, .card, table {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  @page {
+    margin: 1.5cm;
+    size: auto;
+  }
+}
+
+

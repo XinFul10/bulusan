@@ -19,6 +19,10 @@ Route::get('/health', fn () => response()->json(['ok' => true]));
 Route::get('/reports', [ReportController::class, 'index'])->middleware('auth:sanctum');
 Route::post('/reports', [ReportController::class, 'store'])->middleware('auth:sanctum');
 Route::delete('/reports/{report}', [ReportController::class, 'destroy'])->middleware('auth:sanctum');
+// Verification intentionally searches all rows (incl. soft-deleted) by code
+Route::post('/reports/verify', [ReportController::class, 'verify'])->middleware('auth:sanctum');
+// Description update works for soft-deleted reports too (controller uses withTrashed)
+Route::patch('/reports/{id}/description', [ReportController::class, 'updateDescription'])->middleware('auth:sanctum');
 
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/auth/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');

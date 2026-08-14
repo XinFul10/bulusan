@@ -10,6 +10,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { notificationService } from '../../services/notificationService'
 import { buildNotificationPath } from '../../utils/notificationNavigation'
+import { SkeletonNotification } from '../../components/Skeleton'
 
 const typeConfig = {
   approval_request: {
@@ -196,9 +197,9 @@ const NotificationDropdown = ({ unreadCount, onUnreadCountChange }) => {
 
           <div className="max-h-[min(24rem,60vh)] overflow-y-auto">
             {loading ? (
-              <div className="flex justify-center py-10">
-                <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-primary" />
-              </div>
+              <ul className="divide-y divide-gray-100">
+                <SkeletonNotification count={4} />
+              </ul>
             ) : notifications.length === 0 ? (
               <div className="text-center py-10 px-4">
                 <BellIcon className="w-10 h-10 text-gray-300 mx-auto mb-2" />

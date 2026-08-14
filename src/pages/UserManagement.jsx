@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { userService } from '../services/transactionService'
 import PasswordResetModal from '../components/PasswordResetModal'
 import toast from 'react-hot-toast'
+import { SkeletonTable } from '../components/Skeleton'
 
 const emptyFormData = {
   full_name: '',
@@ -197,11 +198,8 @@ const UserManagement = () => {
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {loading ? (
-                  <tr>
-                    <td colSpan="6" className="text-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                    </td>
-                  </tr>
+                  <SkeletonTable rows={6} cols={6}
+                    colWidths={['w-full','w-32','w-20','w-20','w-28','w-20']} />
                 ) : users.length === 0 ? (
                   <tr>
                     <td colSpan="6" className="text-center py-8 text-text-light">

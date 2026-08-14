@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import { approvalService, requestService, categoryService } from '../services/transactionService'
 import { getStatusClass } from '../utils/requestStatus'
 import { scrollToElement } from '../utils/notificationNavigation'
+import { SkeletonTable } from '../components/Skeleton'
 
 const normalize = (value) => (value ?? '').trim().toLowerCase()
 
@@ -227,8 +228,54 @@ const Tracking = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="space-y-4 sm:space-y-6">
+        {/* Page heading */}
+        <div className="space-y-2">
+          <div className="skeleton-shimmer h-7 w-44 rounded" />
+          <div className="skeleton-shimmer h-4 w-80 rounded" />
+        </div>
+
+        {/* Request Timeline card placeholder */}
+        <div className="card py-6 sm:py-8 px-4 sm:px-6 space-y-4">
+          <div className="flex justify-between items-start">
+            <div className="space-y-2">
+              <div className="skeleton-shimmer h-5 w-40 rounded" />
+              <div className="skeleton-shimmer h-3.5 w-64 rounded" />
+            </div>
+          </div>
+          {/* Stepper placeholder */}
+          <div className="flex gap-3 overflow-hidden mt-2">
+            {[0,1,2,3,4].map(i => (
+              <div key={i} className="flex-1 space-y-2">
+                <div className="skeleton-shimmer h-8 w-8 rounded-full mx-auto" />
+                <div className="skeleton-shimmer h-3 w-full rounded" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Request Progress table */}
+        <div className="space-y-2">
+          <div className="skeleton-shimmer h-5 w-40 rounded" />
+          <div className="skeleton-shimmer h-3.5 w-32 rounded" />
+        </div>
+        <div className="card p-0 overflow-hidden">
+          <div className="responsive-table-wrap">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead>
+                <tr>
+                  {['Request ID','Title','Requested By','Dept.','Status','Progress','Date','Action'].map(h => (
+                    <th key={h} className="table-header">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                <SkeletonTable rows={6} cols={8}
+                  colWidths={['w-24','w-full','w-28','w-28','w-20','w-32','w-24','w-16']} />
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     )
   }

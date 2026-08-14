@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../context/AuthContext'
 import { profileService } from '../services/profileService'
+import { SkeletonBase } from '../components/Skeleton'
 
 // Append a timestamp query param so the browser never serves a cached avatar
 const bustCache = (url) => {
@@ -134,8 +135,38 @@ const Profile = () => {
 
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="space-y-6">
+        {/* Page heading */}
+        <div className="space-y-2">
+          <SkeletonBase className="h-7 w-44 rounded" />
+          <SkeletonBase className="h-4 w-80 rounded" />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Avatar card placeholder */}
+          <div className="lg:col-span-1">
+            <div className="card text-center space-y-4">
+              <SkeletonBase className="h-24 w-24 rounded-full mx-auto" />
+              <SkeletonBase className="h-5 w-32 rounded mx-auto" />
+              <SkeletonBase className="h-3.5 w-40 rounded mx-auto" />
+              <SkeletonBase className="h-9 w-32 rounded-lg mx-auto" />
+            </div>
+          </div>
+
+          {/* Form card placeholder */}
+          <div className="lg:col-span-2">
+            <div className="card space-y-5">
+              <SkeletonBase className="h-5 w-36 rounded" />
+              {[0,1,2,3].map(i => (
+                <div key={i} className="space-y-1.5">
+                  <SkeletonBase className="h-3.5 w-24 rounded" />
+                  <SkeletonBase className="h-10 w-full rounded-lg" />
+                </div>
+              ))}
+              <SkeletonBase className="h-10 w-28 rounded-lg" />
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
