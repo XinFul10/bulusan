@@ -7,11 +7,14 @@ import {
   ArrowDownTrayIcon,
   PencilIcon,
   TrashIcon,
+  ClockIcon,
   ChevronLeftIcon,
   ChevronRightIcon
 } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import AddTransactionModal from '../components/Transactions/AddTransactionModal'
+import DeleteTransactionModal from '../components/Transactions/DeleteTransactionModal'
+import ObligationHistoryModal from '../components/Transactions/ObligationHistoryModal'
 import { transactionService } from '../services/transactionService'
 import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'
@@ -46,6 +49,9 @@ const Transactions = () => {
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editData, setEditData] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [historyTarget, setHistoryTarget] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const { user, isAdmin } = useAuth()
@@ -158,15 +164,19 @@ const Transactions = () => {
     currentPage * pageSize
   )
 
-  const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this transaction?')) return
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
     
     try {
-      await transactionService.delete(id)
+      setIsDeleting(true)
+      await transactionService.delete(deleteTarget.id)
       toast.success('Transaction deleted')
+      setDeleteTarget(null)
       fetchTransactions()
     } catch (error) {
-      toast.error('Failed to delete transaction')
+      toast.error(error.response?.data?.message || 'Failed to delete transaction')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -293,34 +303,36 @@ const Transactions = () => {
         </div>
 
         {/* Date Range & Export */}
-        <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-end">
-          <div className="flex flex-col xs:flex-row gap-2 items-stretch sm:items-center">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
             <input
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="input-field min-h-[44px]"
+              className="input-field w-full sm:w-auto"
+              aria-label="Date from"
             />
-            <span className="text-text-light text-center sm:text-left">to</span>
+            <span className="text-text-light text-sm font-medium px-1">to</span>
             <input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="input-field min-h-[44px]"
+              className="input-field w-full sm:w-auto"
+              aria-label="Date to"
             />
           </div>
           
-          <div className="flex gap-2 sm:ml-auto">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={exportToCSV}
-              className="btn-secondary flex items-center justify-center gap-2 min-h-[44px] flex-1 sm:flex-none"
+              className="btn-secondary flex items-center justify-center gap-2 flex-1 sm:flex-initial"
             >
               <ArrowDownTrayIcon className="w-4 h-4" />
               CSV
             </button>
             <button
               onClick={exportToPDF}
-              className="btn-secondary flex items-center justify-center gap-2 min-h-[44px] flex-1 sm:flex-none"
+              className="btn-secondary flex items-center justify-center gap-2 flex-1 sm:flex-initial"
             >
               <ArrowDownTrayIcon className="w-4 h-4" />
               PDF
@@ -360,6 +372,8 @@ const Transactions = () => {
               paginatedData.map((transaction) => {
                 const status = getStatus(transaction.allocated_amount, transaction.obligated_amount)
                 const isHighlighted = highlightRequestId && transaction.request_id === highlightRequestId
+                const entriesCount = transaction.obligation_entries?.length || 0
+
                 return (
                   <tr
                     key={transaction.id}
@@ -377,10 +391,23 @@ const Transactions = () => {
                     <td className="table-cell text-right font-medium">
                       {formatCurrency(transaction.allocated_amount)}
                     </td>
-                    <td className="table-cell text-right text-danger">
-                      {formatCurrency(transaction.obligated_amount)}
+                    <td className="table-cell text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <span className="text-danger font-semibold">
+                          {formatCurrency(transaction.obligated_amount)}
+                        </span>
+                        {entriesCount > 0 && (
+                          <button
+                            onClick={() => setHistoryTarget(transaction)}
+                            className="inline-flex items-center text-[10px] bg-primary/10 text-primary hover:bg-primary/20 px-1.5 py-0.5 rounded transition-colors font-medium cursor-pointer"
+                            title="View Obligation Entries History"
+                          >
+                            {entriesCount} {entriesCount === 1 ? 'entry' : 'entries'}
+                          </button>
+                        )}
+                      </div>
                     </td>
-                    <td className="table-cell text-right text-success">
+                    <td className="table-cell text-right text-success font-medium">
                       {formatCurrency(transaction.balance)}
                     </td>
                     <td className="table-cell">
@@ -389,20 +416,29 @@ const Transactions = () => {
                       </span>
                     </td>
                     <td className="table-cell">
-                      <div className="flex justify-center gap-2">
+                      <div className="flex justify-center gap-1">
+                        {entriesCount > 0 && (
+                          <button
+                            onClick={() => setHistoryTarget(transaction)}
+                            className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-text-light hover:text-primary hover:bg-primary/10 rounded transition-colors"
+                            title="View Obligation History"
+                          >
+                            <ClockIcon className="w-4 h-4" />
+                          </button>
+                        )}
                         {(isAdmin() || transaction.created_by === user?.id) && (
                           <button
                             onClick={() => handleEdit(transaction)}
-                            className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-primary hover:bg-primary/10 rounded"
-                            title="Edit"
+                            className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-primary hover:bg-primary/10 rounded transition-colors"
+                            title="Add Obligation"
                           >
                             <PencilIcon className="w-4 h-4" />
                           </button>
                         )}
                         {(isAdmin() || transaction.created_by === user?.id) && (
                           <button
-                            onClick={() => handleDelete(transaction.id)}
-                            className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-danger hover:bg-danger/10 rounded"
+                            onClick={() => setDeleteTarget(transaction)}
+                            className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-danger hover:bg-danger/10 rounded transition-colors"
                             title="Delete"
                           >
                             <TrashIcon className="w-4 h-4" />
@@ -461,7 +497,7 @@ const Transactions = () => {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Add / Edit Modal */}
       <AddTransactionModal
         isOpen={isModalOpen}
         onClose={() => {
@@ -471,8 +507,25 @@ const Transactions = () => {
         onSuccess={fetchTransactions}
         editData={editData}
       />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteTransactionModal
+        isOpen={Boolean(deleteTarget)}
+        onClose={() => !isDeleting && setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        transaction={deleteTarget}
+        loading={isDeleting}
+      />
+
+      {/* Obligation History Modal */}
+      <ObligationHistoryModal
+        isOpen={Boolean(historyTarget)}
+        onClose={() => setHistoryTarget(null)}
+        transaction={historyTarget}
+      />
     </div>
   )
 }
 
 export default Transactions
+

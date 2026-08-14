@@ -22,16 +22,9 @@ class TransactionController extends Controller
     ) {
     }
 
-    public function index()
+    private function formatTransaction(Transaction $t): array
     {
-        $transactions = Transaction::query()
-            ->where('is_visible_in_transactions', true)
-            ->with(['category:id,name', 'creator:id,full_name', 'budgetRequest:id,request_number'])
-            ->orderByDesc('transaction_date')
-            ->orderByDesc('id')
-            ->get();
-
-        $data = $transactions->map(fn (Transaction $t) => [
+        return [
             'id' => $t->id,
             'transaction_date' => Carbon::parse($t->transaction_date)->toDateString(),
             'description' => $t->description,
@@ -45,7 +38,34 @@ class TransactionController extends Controller
             'budget_request_id' => $t->budget_request_id,
             'request_id' => $t->budgetRequest?->request_number,
             'created_at' => $t->created_at?->toIso8601String(),
-        ]);
+            'obligation_entries' => $t->relationLoaded('obligationEntries')
+                ? $t->obligationEntries->map(fn ($e) => [
+                    'id' => $e->id,
+                    'amount' => (int) $e->amount,
+                    'date' => Carbon::parse($e->date)->toDateString(),
+                    'note' => $e->note,
+                    'created_by' => $e->creator?->full_name ?? 'Unknown',
+                    'created_at' => $e->created_at?->toIso8601String(),
+                ])->values()->all()
+                : [],
+        ];
+    }
+
+    public function index()
+    {
+        $transactions = Transaction::query()
+            ->where('is_visible_in_transactions', true)
+            ->with([
+                'category:id,name',
+                'creator:id,full_name',
+                'budgetRequest:id,request_number',
+                'obligationEntries.creator:id,full_name',
+            ])
+            ->orderByDesc('transaction_date')
+            ->orderByDesc('id')
+            ->get();
+
+        $data = $transactions->map(fn (Transaction $t) => $this->formatTransaction($t));
 
         return response()->json([
             'data' => $data,
@@ -70,13 +90,13 @@ class TransactionController extends Controller
 
         $remainingBudget = max(0, $latestBudget->total_budget - $currentObligated);
 
-        if ($data['allocated_amount'] > $latestBudget->total_budget) {
+        if (isset($data['allocated_amount']) && $data['allocated_amount'] > $latestBudget->total_budget) {
             throw new HttpResponseException(response()->json([
                 'message' => 'Allocated amount cannot exceed the total budget of ₱' . number_format($latestBudget->total_budget, 2),
             ], 422));
         }
 
-        if ($data['obligated_amount'] > $remainingBudget) {
+        if (isset($data['obligated_amount']) && $data['obligated_amount'] > $remainingBudget) {
             throw new HttpResponseException(response()->json([
                 'message' => 'Obligated amount cannot exceed the remaining budget of ₱' . number_format($remainingBudget, 2),
             ], 422));
@@ -162,7 +182,23 @@ class TransactionController extends Controller
             'created_by' => $request->user()->id,
             'budget_request_id' => $budgetRequest->id,
             'is_visible_in_transactions' => false,
-        ])->load(['category:id,name', 'creator:id,full_name']);
+        ]);
+
+        // If an initial obligated amount was provided, record it as an obligation entry
+        if ($transaction->obligated_amount > 0) {
+            $transaction->obligationEntries()->create([
+                'amount' => $transaction->obligated_amount,
+                'date' => $transaction->transaction_date ?? now()->toDateString(),
+                'note' => 'Initial obligation',
+                'created_by' => $request->user()->id,
+            ]);
+        }
+
+        $transaction->load([
+            'category:id,name',
+            'creator:id,full_name',
+            'obligationEntries.creator:id,full_name',
+        ]);
 
         // Log transaction creation
         SystemLog::log(
@@ -182,78 +218,138 @@ class TransactionController extends Controller
         );
 
         return response()->json([
-            'data' => [
-                'id' => $transaction->id,
-                'transaction_date' => Carbon::parse($transaction->transaction_date)->toDateString(),
-                'description' => $transaction->description,
-                'category_id' => $transaction->category_id,
-                'category_name' => $transaction->category?->name,
-                'creator_name' => $transaction->creator?->full_name,
-                'allocated_amount' => (int) $transaction->allocated_amount,
-                'obligated_amount' => (int) $transaction->obligated_amount,
-                'balance' => (int) max(0, ((int) $transaction->allocated_amount) - ((int) $transaction->obligated_amount)),
-                'created_by' => $transaction->created_by,
-                'created_at' => $transaction->created_at?->toIso8601String(),
-            ],
+            'data' => $this->formatTransaction($transaction),
         ], 201);
+    }
+
+    /**
+     * Add an incremental obligation entry to a transaction
+     */
+    public function addObligation(Request $request, Transaction $transaction)
+    {
+        $data = $request->validate([
+            'amount' => ['required', 'integer', 'min:1'],
+            'date'   => ['nullable', 'date'],
+            'note'   => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $this->authorizeTransactionUpdate($request, $transaction);
+
+        $newTotalObligated = (int) $transaction->obligated_amount + (int) $data['amount'];
+
+        if ($newTotalObligated > (int) $transaction->allocated_amount) {
+            $excess = $newTotalObligated - (int) $transaction->allocated_amount;
+            throw new HttpResponseException(response()->json([
+                'message' => "This obligation entry would exceed the allocated ₱" . number_format($transaction->allocated_amount, 2) . " by ₱" . number_format($excess, 2) . ".",
+            ], 422));
+        }
+
+        $this->ensureWithinBudget([
+            'allocated_amount' => $transaction->allocated_amount,
+            'obligated_amount' => $newTotalObligated,
+        ], $transaction);
+
+        $entry = $transaction->obligationEntries()->create([
+            'amount'     => $data['amount'],
+            'date'       => $data['date'] ?? now()->toDateString(),
+            'note'       => $data['note'] ?? null,
+            'created_by' => $request->user()->id,
+        ]);
+
+        $oldObligated = $transaction->obligated_amount;
+        $transaction->update([
+            'obligated_amount' => $newTotalObligated,
+        ]);
+
+        // Log audit trail
+        SystemLog::log(
+            $request->user()->id,
+            'UPDATE',
+            'Transaction',
+            "Added obligation of ₱" . number_format($data['amount'], 2) . " to transaction #{$transaction->id} ({$transaction->description}). Total obligated: ₱" . number_format($newTotalObligated, 2),
+            $transaction->id,
+            [
+                'obligation_entry_id' => $entry->id,
+                'amount_added'        => $data['amount'],
+                'old_obligated_amount'=> $oldObligated,
+                'new_total_obligated' => $newTotalObligated,
+                'note'                => $data['note'] ?? null,
+            ],
+            $request
+        );
+
+        $transaction->load([
+            'category:id,name',
+            'creator:id,full_name',
+            'budgetRequest:id,request_number',
+            'obligationEntries.creator:id,full_name',
+        ]);
+
+        return response()->json([
+            'data' => $this->formatTransaction($transaction),
+            'message' => 'Obligation added successfully',
+        ]);
     }
 
     public function update(Request $request, Transaction $transaction)
     {
+        // If 'amount' is passed, treat as addObligation
+        if ($request->has('amount')) {
+            return $this->addObligation($request, $transaction);
+        }
+
         $data = $request->validate([
-            'transaction_date' => ['sometimes', 'date'],
-            'description' => ['sometimes', 'string', 'max:255'],
-            'category_id' => ['sometimes', 'nullable', 'integer', 'exists:categories,id', 'required_without:custom_category'],
-            'custom_category' => ['sometimes', 'nullable', 'string', 'max:255', 'required_without:category_id'],
-            'allocated_amount' => ['sometimes', 'integer', 'min:0'],
-            'obligated_amount' => ['sometimes', 'integer', 'min:0'],
+            'obligated_amount' => ['required', 'integer', 'min:0'],
+            'date' => ['nullable', 'date'],
+            'note' => ['nullable', 'string', 'max:255'],
         ]);
 
-        if (! empty($data['category_id']) && ! empty($data['custom_category'])) {
-            throw new HttpResponseException(response()->json([
-                'message' => 'Please choose either a preset category or a custom category, not both.',
-            ], 422));
-        }
-
-        if (array_key_exists('obligated_amount', $data) && $data['obligated_amount'] === null) {
-            $data['obligated_amount'] = 0;
-        }
-
-        if (! empty($data['custom_category']) && empty($data['category_id'])) {
-            $category = Category::firstOrCreate(
-                ['name' => trim($data['custom_category'])],
-                ['allocation' => 0]
-            );
-            $data['category_id'] = $category->id;
-        }
-
-        if (array_key_exists('custom_category', $data)) {
-            unset($data['custom_category']);
-        }
-
         $this->authorizeTransactionUpdate($request, $transaction);
-        $this->ensureWithinBudget(array_merge([
+        $this->ensureWithinBudget([
             'allocated_amount' => $transaction->allocated_amount,
-            'obligated_amount' => $transaction->obligated_amount,
-        ], $data), $transaction);
+            'obligated_amount' => $data['obligated_amount'],
+        ], $transaction);
 
-        $transaction->fill($data)->save();
-        $transaction->load(['category:id,name', 'creator:id,full_name']);
+        $oldObligated = (int) $transaction->obligated_amount;
+        $newObligated = (int) $data['obligated_amount'];
+        $diff = $newObligated - $oldObligated;
+
+        if ($diff > 0) {
+            $transaction->obligationEntries()->create([
+                'amount' => $diff,
+                'date' => $data['date'] ?? now()->toDateString(),
+                'note' => $data['note'] ?? 'Obligation update',
+                'created_by' => $request->user()->id,
+            ]);
+        }
+
+        $transaction->update([
+            'obligated_amount' => $newObligated,
+        ]);
+
+        SystemLog::log(
+            $request->user()->id,
+            'UPDATE',
+            'Transaction',
+            "Updated obligated amount for transaction #{$transaction->id} ({$transaction->description}): ₱" . number_format($oldObligated, 2) . " → ₱" . number_format($newObligated, 2),
+            $transaction->id,
+            [
+                'old_obligated_amount' => $oldObligated,
+                'new_obligated_amount' => $newObligated,
+                'allocated_amount' => $transaction->allocated_amount,
+            ],
+            $request
+        );
+
+        $transaction->load([
+            'category:id,name',
+            'creator:id,full_name',
+            'budgetRequest:id,request_number',
+            'obligationEntries.creator:id,full_name',
+        ]);
 
         return response()->json([
-            'data' => [
-                'id' => $transaction->id,
-                'transaction_date' => Carbon::parse($transaction->transaction_date)->toDateString(),
-                'description' => $transaction->description,
-                'category_id' => $transaction->category_id,
-                'category_name' => $transaction->category?->name,
-                'creator_name' => $transaction->creator?->full_name,
-                'allocated_amount' => (int) $transaction->allocated_amount,
-                'obligated_amount' => (int) $transaction->obligated_amount,
-                'balance' => (int) max(0, ((int) $transaction->allocated_amount) - ((int) $transaction->obligated_amount)),
-                'created_by' => $transaction->created_by,
-                'created_at' => $transaction->created_at?->toIso8601String(),
-            ],
+            'data' => $this->formatTransaction($transaction),
         ]);
     }
 
@@ -261,9 +357,18 @@ class TransactionController extends Controller
     {
         $this->authorizeTransactionDelete($request, $transaction);
 
+        SystemLog::log(
+            $request->user()->id,
+            'DELETE',
+            'Transaction',
+            "Deleted transaction: {$transaction->description}",
+            $transaction->id,
+            null,
+            $request
+        );
+
         $transaction->delete();
 
         return response()->json(['success' => true]);
     }
 }
-

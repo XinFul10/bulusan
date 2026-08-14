@@ -35,6 +35,16 @@ class ReportController extends Controller
             'description'       => ['nullable', 'string', 'max:2000'],
         ]);
 
+        // Resolve category display name and compute data
+        $categoryParam = $data['category'] ?? 'All';
+        $categoryDisplay = 'All';
+        if ($categoryParam && $categoryParam !== 'All') {
+            $catModel = is_numeric($categoryParam)
+                ? Category::find($categoryParam)
+                : Category::where('name', $categoryParam)->first();
+            $categoryDisplay = $catModel ? $catModel->name : $categoryParam;
+        }
+
         // Calculate real report data from transactions
         $reportData = $this->calculateReportData(
             $data['date_from'] ?? null,
@@ -44,6 +54,7 @@ class ReportController extends Controller
 
         $report = Report::create([
             ...$data,
+            'category'   => $categoryDisplay,
             'data'       => $reportData,
             'created_by' => $request->user()->id,
         ]);
@@ -204,14 +215,18 @@ class ReportController extends Controller
     {
         $categories = Category::query();
         if ($category && $category !== 'All') {
-            $categories->where('id', $category);
+            if (is_numeric($category)) {
+                $categories->where('id', $category);
+            } else {
+                $categories->where('name', $category);
+            }
         }
         $categories = $categories->get();
 
         $reportData = [];
         foreach ($categories as $cat) {
             $query = Transaction::query()
-                ->with('creator:id,full_name')
+                ->with(['creator:id,full_name', 'obligationEntries.creator:id,full_name'])
                 ->where('is_visible_in_transactions', true)
                 ->where('category_id', $cat->id);
 
@@ -227,7 +242,7 @@ class ReportController extends Controller
             $totalAllocated = (int) $transactions->sum('allocated_amount');
             $totalObligated = (int) $transactions->sum('obligated_amount');
 
-            if ($totalAllocated > 0) {
+            if ($totalAllocated > 0 || $totalObligated > 0 || $transactions->isNotEmpty()) {
                 $reportData[] = [
                     'id'           => $cat->id,
                     'name'         => $cat->name,
@@ -237,13 +252,20 @@ class ReportController extends Controller
                     'balance'      => max(0, $totalAllocated - $totalObligated),
                     // Snapshot of individual transactions for the breakdown table
                     'transactions' => $transactions->map(fn (Transaction $t) => [
-                        'id'          => $t->id,
-                        'date'        => $t->transaction_date->toDateString(),
-                        'description' => $t->description,
-                        'created_by'  => $t->creator?->full_name ?? 'Unknown',
-                        'allocated'   => (int) $t->allocated_amount,
-                        'obligated'   => (int) $t->obligated_amount,
-                        'balance'     => max(0, (int) $t->allocated_amount - (int) $t->obligated_amount),
+                        'id'                 => $t->id,
+                        'date'               => $t->transaction_date->toDateString(),
+                        'description'        => $t->description,
+                        'created_by'         => $t->creator?->full_name ?? 'Unknown',
+                        'allocated'          => (int) $t->allocated_amount,
+                        'obligated'          => (int) $t->obligated_amount,
+                        'balance'            => max(0, (int) $t->allocated_amount - (int) $t->obligated_amount),
+                        'obligation_entries' => $t->obligationEntries->map(fn ($e) => [
+                            'id'         => $e->id,
+                            'amount'     => (int) $e->amount,
+                            'date'       => Carbon::parse($e->date)->toDateString(),
+                            'note'       => $e->note,
+                            'created_by' => $e->creator?->full_name ?? 'Unknown',
+                        ])->values()->all(),
                     ])->values()->all(),
                 ];
             }

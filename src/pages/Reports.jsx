@@ -12,10 +12,11 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
 import toast from 'react-hot-toast'
-import { reportService } from '../services/transactionService'
+import { reportService, transactionService } from '../services/transactionService'
 import { generateReportCode, isValidReportCode } from '../utils/reportCodeGenerator'
 import { useAuth } from '../context/AuthContext'
 import { SkeletonReportItem } from '../components/Skeleton'
+import DeleteReportModal from '../components/DeleteReportModal'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const reportTypes = [
@@ -25,8 +26,7 @@ const reportTypes = [
   { value: 'monthly_trends', label: 'Monthly Trends' }
 ]
 
-const categories = [
-  { id: '', name: 'All Categories' },
+const PREDEFINED_CATEGORIES = [
   { id: 1, name: 'Capacity Development' },
   { id: 2, name: 'TM & Promotions' },
   { id: 3, name: 'Socio-Cultural & Eco' },
@@ -98,10 +98,16 @@ const safeDate = (dateValue, fmt = 'MMM dd, yyyy HH:mm') => {
  * Handles the case where older reports have no transactions[] in their data.
  */
 const TransactionBreakdown = ({ transactions = [], formatCurrency }) => {
+  const [expandedTxns, setExpandedTxns] = useState({})
+
+  const toggleTxn = (id) => {
+    setExpandedTxns(prev => ({ ...prev, [id]: !prev[id] }))
+  }
+
   if (!transactions.length) {
     return (
       <tr>
-        <td colSpan="7" className="px-6 py-3 text-xs text-text-light italic bg-gray-50/80">
+        <td colSpan="7" className="px-6 py-3 text-xs text-text-light italic text-center bg-gray-50/80">
           No individual transaction records stored for this report period.
           (Re-generate the report to capture a full snapshot.)
         </td>
@@ -112,28 +118,65 @@ const TransactionBreakdown = ({ transactions = [], formatCurrency }) => {
     <>
       {transactions.map((t, i) => {
         const status = getTransactionStatus(t.allocated, t.obligated)
+        const entries = t.obligation_entries || []
+        const isTxnExpanded = !!expandedTxns[t.id ?? i]
+
         return (
-          <tr key={t.id ?? i} className="bg-gray-50/60 hover:bg-primary/[0.03] transition-colors">
-            {/* Indent cell */}
-            <td className="w-8 pl-6 pr-0 py-2">
-              <span className="block w-px h-full bg-gray-300 mx-auto" />
-            </td>
-            <td className="table-cell text-xs text-text-light py-2">
-              {safeDate(t.date, 'MMM dd, yyyy')}
-            </td>
-            <td className="table-cell text-xs py-2 max-w-[200px]">
-              <span className="block truncate" title={t.description}>{t.description}</span>
-            </td>
-            <td className="table-cell text-xs text-text-light py-2">{t.created_by}</td>
-            <td className="table-cell text-xs text-right py-2">{formatCurrency(t.allocated)}</td>
-            <td className="table-cell text-xs text-right text-danger py-2">{formatCurrency(t.obligated)}</td>
-            <td className="table-cell text-xs text-right text-success py-2">{formatCurrency(t.balance)}</td>
-            <td className="table-cell text-xs text-center py-2">
-              <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] text-white ${status.color}`}>
-                {status.label}
-              </span>
-            </td>
-          </tr>
+          <Fragment key={t.id ?? i}>
+            <tr className="hover:bg-primary/[0.03] transition-colors">
+              <td className="table-cell text-xs text-text-light py-2">
+                {safeDate(t.date, 'MMM dd, yyyy')}
+              </td>
+              <td className="table-cell text-xs py-2 max-w-[200px]">
+                <span className="block truncate" title={t.description}>{t.description}</span>
+              </td>
+              <td className="table-cell text-xs text-text-light py-2">{t.created_by}</td>
+              <td className="table-cell text-xs text-right py-2 font-medium">{formatCurrency(t.allocated)}</td>
+              <td className="table-cell text-xs text-right py-2 font-medium">
+                <div className="flex items-center justify-end gap-1">
+                  <span className="text-danger">{formatCurrency(t.obligated)}</span>
+                  {entries.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => toggleTxn(t.id ?? i)}
+                      className="text-[10px] text-primary hover:bg-primary/10 px-1 py-0.5 rounded cursor-pointer print:hidden font-medium"
+                      title="View obligation history log"
+                    >
+                      {entries.length > 1 ? `(${entries.length} entries)` : '(log)'}
+                    </button>
+                  )}
+                </div>
+              </td>
+              <td className="table-cell text-xs text-right text-success py-2 font-medium">{formatCurrency(t.balance)}</td>
+              <td className="table-cell text-xs text-center py-2">
+                <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] text-white ${status.color}`}>
+                  {status.label}
+                </span>
+              </td>
+            </tr>
+
+            {isTxnExpanded && entries.length > 0 && (
+              <tr>
+                <td colSpan="7" className="p-0 bg-primary/[0.02]">
+                  <div className="py-2.5 px-4 space-y-1.5 border-y border-primary/10">
+                    <p className="text-[11px] font-semibold text-primary">Obligation Entries Log for "{t.description}":</p>
+                    <div className="space-y-1">
+                      {entries.map((entry, eIdx) => (
+                        <div key={entry.id || eIdx} className="flex items-center justify-between text-xs text-text-dark bg-white p-1.5 rounded border border-gray-200">
+                          <div>
+                            <span className="font-semibold text-danger">{formatCurrency(entry.amount)}</span>
+                            <span className="text-text-light ml-2">on {safeDate(entry.date, 'MMM dd, yyyy')}</span>
+                            {entry.note && <span className="text-text-dark ml-2 italic">— "{entry.note}"</span>}
+                          </div>
+                          <span className="text-[11px] text-text-light">by {entry.created_by}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            )}
+          </Fragment>
         )
       })}
     </>
@@ -149,12 +192,18 @@ const Reports = () => {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
+  const [categoriesList, setCategoriesList] = useState({
+    predefined: PREDEFINED_CATEGORIES,
+    custom: []
+  })
 
   // Data state
   const [generatedReports, setGeneratedReports] = useState([])
   const [previewData, setPreviewData] = useState(null)
   const [generating, setGenerating] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [deleteTargetReport, setDeleteTargetReport] = useState(null)
+  const [isDeletingReport, setIsDeletingReport] = useState(false)
 
   // Verification
   const [verificationCode, setVerificationCode] = useState('')
@@ -170,7 +219,10 @@ const Reports = () => {
   const [expandedCategories, setExpandedCategories] = useState({})
 
   // ── Effects ────────────────────────────────────────────────────────────────
-  useEffect(() => { fetchReports() }, [])
+  useEffect(() => {
+    fetchReports()
+    loadCategories()
+  }, [])
 
   // Sync description textarea whenever the previewed report changes
   useEffect(() => {
@@ -180,6 +232,38 @@ const Reports = () => {
   }, [previewData?.id])
 
   // ── Data fetching ──────────────────────────────────────────────────────────
+  const loadCategories = async () => {
+    try {
+      const response = await transactionService.getCategories()
+      const rawCategories = response.data?.data || response.data || []
+      
+      if (Array.isArray(rawCategories) && rawCategories.length > 0) {
+        const predefinedIds = new Set([1, 2, 3, 4])
+        const predefinedNames = new Set(PREDEFINED_CATEGORIES.map(c => c.name.toLowerCase().trim()))
+
+        // Maintain canonical order of predefined categories
+        const matchedPredefined = PREDEFINED_CATEGORIES.map(pCat => {
+          const found = rawCategories.find(
+            f => f.id === pCat.id || f.name?.toLowerCase().trim() === pCat.name.toLowerCase().trim()
+          )
+          return found ? { id: found.id, name: found.name } : pCat
+        })
+
+        // Custom categories are all other categories from DB/transactions, sorted alphabetically
+        const custom = rawCategories
+          .filter(f => !predefinedIds.has(f.id) && !predefinedNames.has(f.name?.toLowerCase().trim()))
+          .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+
+        setCategoriesList({
+          predefined: matchedPredefined,
+          custom
+        })
+      }
+    } catch {
+      // Fallback silently to predefined categories list
+    }
+  }
+
   const fetchReports = async () => {
     try {
       setLoading(true)
@@ -254,19 +338,23 @@ const Reports = () => {
   }
 
   // ── Delete ─────────────────────────────────────────────────────────────────
-  const deleteReport = async (id) => {
-    if (!id) {
+  const confirmDeleteReport = async () => {
+    if (!deleteTargetReport?.id) {
       toast.error('Cannot delete report - no ID available')
       return
     }
 
     try {
-      await reportService.delete(id)
-      setGeneratedReports(prev => prev.filter(r => r.id !== id))
-      if (previewData?.id === id) setPreviewData(null)
+      setIsDeletingReport(true)
+      await reportService.delete(deleteTargetReport.id)
+      setGeneratedReports(prev => prev.filter(r => r.id !== deleteTargetReport.id))
+      if (previewData?.id === deleteTargetReport.id) setPreviewData(null)
       toast.success('Report removed from Saved Reports')
-    } catch {
-      toast.error('Failed to delete report')
+      setDeleteTargetReport(null)
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message || 'Failed to delete report')
+    } finally {
+      setIsDeletingReport(false)
     }
   }
 
@@ -572,7 +660,17 @@ const Reports = () => {
               <div>
                 <label className="block text-sm font-medium text-text-dark mb-1">Category Filter</label>
                 <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} className="input-field">
-                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  <option value="">All Categories</option>
+                  {categoriesList.predefined.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                  {categoriesList.custom.length > 0 && (
+                    <optgroup label="Custom Categories">
+                      {categoriesList.custom.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -630,7 +728,7 @@ const Reports = () => {
                         </button>
                         {(isAdmin() || report.createdBy?.id === user?.id) && (
                           <button
-                            onClick={e => { e.stopPropagation(); deleteReport(report.id) }}
+                            onClick={e => { e.stopPropagation(); setDeleteTargetReport(report) }}
                             className="p-1 text-danger hover:bg-danger/10 rounded" title="Remove from Saved Reports">
                             <TrashIcon className="w-4 h-4" />
                           </button>
@@ -730,7 +828,7 @@ const Reports = () => {
                     </button>
                     {!previewData.isDeleted && (isAdmin() || previewData.createdBy?.id === user?.id) && (
                       <button
-                        onClick={() => deleteReport(previewData.id)}
+                        onClick={() => setDeleteTargetReport(previewData)}
                         className="btn-danger flex items-center gap-2"
                       >
                         <TrashIcon className="w-4 h-4" />
@@ -851,21 +949,33 @@ const Reports = () => {
 
                                 {/* ── Transaction breakdown sub-table ─── */}
                                 {isExpanded && (
-                                  <>
-                                    {/* Sub-header */}
-                                    <tr className="bg-primary/[0.04]">
-                                      <td className="print:hidden" />
-                                      {['Date', 'Description', 'Created By', 'Allocated', 'Obligated', 'Balance', 'Status'].map(h => (
-                                        <td key={h} className="px-3 sm:px-6 py-1.5 text-[10px] font-semibold text-text-light uppercase tracking-wider">
-                                          {h}
-                                        </td>
-                                      ))}
-                                    </tr>
-                                    <TransactionBreakdown
-                                      transactions={item.transactions}
-                                      formatCurrency={formatCurrencyPH}
-                                    />
-                                  </>
+                                  <tr>
+                                    <td colSpan={6} className="p-0 bg-gray-50/50 border-b border-gray-100">
+                                      <div className="py-2.5 px-3 sm:px-6">
+                                        <div className="overflow-x-auto rounded-lg border border-gray-200/70 bg-white shadow-xs">
+                                          <table className="w-full">
+                                            <thead>
+                                              <tr className="bg-primary/[0.04] border-b border-gray-200/70">
+                                                <th className="px-3 py-1.5 text-left text-[10px] font-semibold text-text-light uppercase tracking-wider">Date</th>
+                                                <th className="px-3 py-1.5 text-left text-[10px] font-semibold text-text-light uppercase tracking-wider">Description</th>
+                                                <th className="px-3 py-1.5 text-left text-[10px] font-semibold text-text-light uppercase tracking-wider">Created By</th>
+                                                <th className="px-3 py-1.5 text-right text-[10px] font-semibold text-text-light uppercase tracking-wider">Allocated</th>
+                                                <th className="px-3 py-1.5 text-right text-[10px] font-semibold text-text-light uppercase tracking-wider">Obligated</th>
+                                                <th className="px-3 py-1.5 text-right text-[10px] font-semibold text-text-light uppercase tracking-wider">Balance</th>
+                                                <th className="px-3 py-1.5 text-center text-[10px] font-semibold text-text-light uppercase tracking-wider">Status</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-100">
+                                              <TransactionBreakdown
+                                                transactions={item.transactions}
+                                                formatCurrency={formatCurrencyPH}
+                                              />
+                                            </tbody>
+                                          </table>
+                                        </div>
+                                      </div>
+                                    </td>
+                                  </tr>
                                 )}
                               </Fragment>
                             )
@@ -886,6 +996,15 @@ const Reports = () => {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteReportModal
+        isOpen={Boolean(deleteTargetReport)}
+        onClose={() => !isDeletingReport && setDeleteTargetReport(null)}
+        onConfirm={confirmDeleteReport}
+        report={deleteTargetReport}
+        loading={isDeletingReport}
+      />
     </div>
   )
 }

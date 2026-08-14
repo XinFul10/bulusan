@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Transaction extends Model
 {
@@ -39,5 +40,10 @@ class Transaction extends Model
     public function budgetRequest(): BelongsTo
     {
         return $this->belongsTo(BudgetRequest::class);
+    }
+
+    public function obligationEntries(): HasMany
+    {
+        return $this->hasMany(ObligationEntry::class)->orderBy('date', 'desc')->orderBy('id', 'desc');
     }
 }

@@ -35,6 +35,7 @@ Route::get('/dashboard/stats', [DashboardController::class, 'stats'])->middlewar
 
 Route::get('/transactions', [TransactionController::class, 'index'])->middleware('auth:sanctum');
 Route::post('/transactions', [TransactionController::class, 'store'])->middleware('auth:sanctum');
+Route::post('/transactions/{transaction}/obligations', [TransactionController::class, 'addObligation'])->middleware('auth:sanctum');
 Route::put('/transactions/{transaction}', [TransactionController::class, 'update'])->middleware('auth:sanctum');
 Route::delete('/transactions/{transaction}', [TransactionController::class, 'destroy'])->middleware('auth:sanctum');
 

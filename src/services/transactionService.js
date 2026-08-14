@@ -22,6 +22,11 @@ export const transactionService = {
     return response.data
   },
 
+  addObligation: async (id, data) => {
+    const response = await api.post(`/transactions/${id}/obligations`, data)
+    return response.data
+  },
+
   delete: async (id) => {
     const response = await api.delete(`/transactions/${id}`)
     return response.data
