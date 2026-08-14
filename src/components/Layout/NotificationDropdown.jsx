@@ -7,6 +7,7 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   ExclamationCircleIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline'
 import { notificationService } from '../../services/notificationService'
 import { buildNotificationPath } from '../../utils/notificationNavigation'
@@ -46,6 +47,7 @@ const NotificationDropdown = ({ unreadCount, onUnreadCountChange }) => {
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(false)
   const [markingAll, setMarkingAll] = useState(false)
+  const [clearingAll, setClearingAll] = useState(false)
   const panelRef = useRef(null)
 
   const fetchNotifications = useCallback(async (silent = false) => {
@@ -132,6 +134,19 @@ const NotificationDropdown = ({ unreadCount, onUnreadCountChange }) => {
     }
   }
 
+  const handleClearAll = async () => {
+    try {
+      setClearingAll(true)
+      await notificationService.clearAll()
+      setNotifications([])
+      onUnreadCountChange?.(0)
+    } catch {
+      // silent
+    } finally {
+      setClearingAll(false)
+    }
+  }
+
   const handleNotificationClick = async (notification) => {
     if (!notification.isRead) {
       await handleMarkAsRead(notification.id)
@@ -183,15 +198,29 @@ const NotificationDropdown = ({ unreadCount, onUnreadCountChange }) => {
                 <p className="text-xs text-text-light">{unreadCount} unread</p>
               )}
             </div>
-            {unreadCount > 0 && (
-              <button
-                onClick={handleMarkAllAsRead}
-                disabled={markingAll}
-                className="text-xs text-primary hover:text-primary/80 font-medium flex items-center gap-1 min-h-[44px] px-2 disabled:opacity-50"
-              >
-                <CheckIcon className="w-3.5 h-3.5" />
-                Mark all read
-              </button>
+            {(unreadCount > 0 || notifications.length > 0) && (
+              <div className="flex items-center gap-1">
+                {unreadCount > 0 && (
+                  <button
+                    onClick={handleMarkAllAsRead}
+                    disabled={markingAll || clearingAll}
+                    className="text-xs text-primary hover:text-primary/80 font-medium flex items-center gap-1 min-h-[44px] px-2 disabled:opacity-50"
+                  >
+                    <CheckIcon className="w-3.5 h-3.5" />
+                    Mark all read
+                  </button>
+                )}
+                {notifications.length > 0 && (
+                  <button
+                    onClick={handleClearAll}
+                    disabled={clearingAll || markingAll}
+                    className="text-xs text-danger hover:text-danger/80 font-medium flex items-center gap-1 min-h-[44px] px-2 disabled:opacity-50"
+                  >
+                    <TrashIcon className="w-3.5 h-3.5" />
+                    Clear
+                  </button>
+                )}
+              </div>
             )}
           </div>
 

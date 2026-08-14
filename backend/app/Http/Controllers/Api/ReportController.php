@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Report;
+use App\Models\ReportVerification;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 
@@ -47,7 +48,37 @@ class ReportController extends Controller
             'created_by' => $request->user()->id,
         ]);
 
-        return response()->json(['data' => $this->formatReport($report, $request->user())], 201);
+        // Create verification record that persists even if report is deleted
+        ReportVerification::create([
+            'verification_code' => $report->verification_code,
+            'type' => $report->type,
+            'type_label' => $report->type_label,
+            'date_from' => $report->date_from,
+            'date_to' => $report->date_to,
+            'category' => $report->category,
+            'data' => $report->data,
+            'generated_at' => $report->created_at,
+            'created_by' => $request->user()->id,
+            'is_deleted' => false,
+        ]);
+
+        return response()->json([
+            'data' => [
+                'id' => $report->id,
+                'type' => $report->type,
+                'type_label' => $report->type_label,
+                'date_from' => $report->date_from?->toDateString(),
+                'date_to' => $report->date_to?->toDateString(),
+                'category' => $report->category,
+                'data' => $report->data,
+                'generated_at' => $report->created_at->toIso8601String(),
+                'created_by' => [
+                    'id' => $request->user()->id,
+                    'full_name' => $request->user()->full_name,
+                ],
+                'verification_code' => $report->verification_code,
+            ],
+        ], 201);
     }
 
     /**

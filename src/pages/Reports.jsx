@@ -19,18 +19,18 @@ import { SkeletonReportItem } from '../components/Skeleton'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const reportTypes = [
-  { value: 'budget_summary',    label: 'Budget Summary' },
-  { value: 'obligation_details',label: 'Obligation Details' },
+  { value: 'budget_summary', label: 'Budget Summary' },
+  { value: 'obligation_details', label: 'Obligation Details' },
   { value: 'category_analysis', label: 'Category Analysis' },
-  { value: 'monthly_trends',   label: 'Monthly Trends' }
+  { value: 'monthly_trends', label: 'Monthly Trends' }
 ]
 
 const categories = [
-  { id: '',  name: 'All Categories' },
-  { id: 1,   name: 'Capacity Development' },
-  { id: 2,   name: 'TM & Promotions' },
-  { id: 3,   name: 'Socio-Cultural & Eco' },
-  { id: 4,   name: 'Product & Market Dev' }
+  { id: '', name: 'All Categories' },
+  { id: 1, name: 'Capacity Development' },
+  { id: 2, name: 'TM & Promotions' },
+  { id: 3, name: 'Socio-Cultural & Eco' },
+  { id: 4, name: 'Product & Market Dev' }
 ]
 
 const mockLineData = [
@@ -50,10 +50,10 @@ const COLORS = ['#0E3642', '#22626B', '#10B981', '#F59E0B']
 const getTransactionStatus = (allocated, obligated) => {
   const a = Number(allocated) || 0
   const o = Number(obligated) || 0
-  if (o === 0)        return { label: 'Not Used',     color: 'bg-gray-400' }
-  if (o < a)          return { label: 'Partial',       color: 'bg-warning' }
-  if (o === a)        return { label: 'Fully Used',    color: 'bg-success' }
-  return               { label: 'Over-obligated', color: 'bg-danger' }
+  if (o === 0) return { label: 'Not Used', color: 'bg-gray-400' }
+  if (o < a) return { label: 'Partial', color: 'bg-warning' }
+  if (o === a) return { label: 'Fully Used', color: 'bg-success' }
+  return { label: 'Over-obligated', color: 'bg-danger' }
 }
 
 /**
@@ -62,18 +62,18 @@ const getTransactionStatus = (allocated, obligated) => {
  * produces an identical shape for the preview panel.
  */
 const transformReport = (r) => ({
-  id:               r.id,
-  type:             r.type,
-  typeLabel:        r.type_label,
-  dateFrom:         r.date_from,
-  dateTo:           r.date_to,
-  category:         r.category,
-  data:             r.data,          // already contains transactions[] snapshot
-  generatedAt:      r.generated_at,
-  createdBy:        r.created_by,
+  id: r.id,
+  type: r.type,
+  typeLabel: r.type_label,
+  dateFrom: r.date_from,
+  dateTo: r.date_to,
+  category: r.category,
+  data: r.data,          // already contains transactions[] snapshot
+  generatedAt: r.generated_at,
+  createdBy: r.created_by,
   verificationCode: r.verification_code,
-  description:      r.description ?? '',
-  isDeleted:        r.is_deleted ?? false,
+  description: r.description ?? '',
+  isDeleted: r.is_deleted ?? false,
 })
 
 // ─── Formatters ──────────────────────────────────────────────────────────────
@@ -146,24 +146,24 @@ const Reports = () => {
 
   // Left-panel form state
   const [selectedReport, setSelectedReport] = useState('budget_summary')
-  const [dateFrom,       setDateFrom]       = useState('')
-  const [dateTo,         setDateTo]         = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
 
   // Data state
   const [generatedReports, setGeneratedReports] = useState([])
-  const [previewData,      setPreviewData]      = useState(null)
-  const [generating,       setGenerating]       = useState(false)
-  const [loading,          setLoading]          = useState(true)
+  const [previewData, setPreviewData] = useState(null)
+  const [generating, setGenerating] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   // Verification
-  const [verificationCode,   setVerificationCode]   = useState('')
+  const [verificationCode, setVerificationCode] = useState('')
   const [verificationResult, setVerificationResult] = useState(null)
-  const [verifying,          setVerifying]          = useState(false)
+  const [verifying, setVerifying] = useState(false)
 
   // Description
-  const [descValue,   setDescValue]   = useState('')
-  const [savingDesc,  setSavingDesc]  = useState(false)
+  const [descValue, setDescValue] = useState('')
+  const [savingDesc, setSavingDesc] = useState(false)
   const descTimeoutRef = useRef(null)
 
   // Expand/collapse state — keyed by category index
@@ -198,11 +198,11 @@ const Reports = () => {
     try {
       const generatedCode = generateReportCode()
       const response = await reportService.create({
-        type:              selectedReport,
-        type_label:        reportTypes.find(t => t.value === selectedReport)?.label,
-        date_from:         dateFrom || '2026-01-01',
-        date_to:           dateTo || format(new Date(), 'yyyy-MM-dd'),
-        category:          categoryFilter || 'All',
+        type: selectedReport,
+        type_label: reportTypes.find(t => t.value === selectedReport)?.label,
+        date_from: dateFrom || '2026-01-01',
+        date_to: dateTo || format(new Date(), 'yyyy-MM-dd'),
+        category: categoryFilter || 'All',
         verification_code: generatedCode
       })
       const report = transformReport(response.data)
@@ -220,9 +220,9 @@ const Reports = () => {
   const toggleCategory = (index) =>
     setExpandedCategories(prev => ({ ...prev, [index]: !prev[index] }))
 
-  const expandAll  = () => {
+  const expandAll = () => {
     const all = {}
-    ;(previewData?.data || []).forEach((_, i) => { all[i] = true })
+      ; (previewData?.data || []).forEach((_, i) => { all[i] = true })
     setExpandedCategories(all)
   }
   const collapseAll = () => setExpandedCategories({})
@@ -255,6 +255,11 @@ const Reports = () => {
 
   // ── Delete ─────────────────────────────────────────────────────────────────
   const deleteReport = async (id) => {
+    if (!id) {
+      toast.error('Cannot delete report - no ID available')
+      return
+    }
+
     try {
       await reportService.delete(id)
       setGeneratedReports(prev => prev.filter(r => r.id !== id))
@@ -345,7 +350,7 @@ const Reports = () => {
           : '0%'
       ]),
       startY,
-      styles:     { fontSize: 8 },
+      styles: { fontSize: 8 },
       headStyles: { fillColor: [14, 54, 66] },
       didDrawPage: (data) => { startY = data.cursor.y }
     })
@@ -390,9 +395,9 @@ const Reports = () => {
             ]
           }),
           startY,
-          styles:     { fontSize: 7, cellPadding: 1.5 },
+          styles: { fontSize: 7, cellPadding: 1.5 },
           headStyles: { fillColor: [34, 98, 107], fontSize: 7 },
-          margin:     { left: 18 },
+          margin: { left: 18 },
           didDrawPage: (data) => { startY = data.cursor.y }
         })
 
@@ -417,10 +422,10 @@ const Reports = () => {
 
     // ── Sheet 1: Summary ──────────────────────────────────────────────────
     const summaryData = (report.data || []).map(item => ({
-      Category:    item.name,
-      Allocated:   Number(item.allocated) || 0,
-      Obligated:   Number(item.obligated) || 0,
-      Balance:     Math.max(0, (Number(item.allocated) || 0) - (Number(item.obligated) || 0)),
+      Category: item.name,
+      Allocated: Number(item.allocated) || 0,
+      Obligated: Number(item.obligated) || 0,
+      Balance: Math.max(0, (Number(item.allocated) || 0) - (Number(item.obligated) || 0)),
       Utilization: item.allocated
         ? `${(((Number(item.obligated) || 0) / Number(item.allocated)) * 100).toFixed(1)}%`
         : '0%'
@@ -452,14 +457,14 @@ const Reports = () => {
       for (const t of cat.transactions) {
         const status = getTransactionStatus(t.allocated, t.obligated)
         txnRows.push({
-          Category:    '',              // blank — belongs to the section above
-          Date:        safeDate(t.date, 'MMM dd, yyyy'),
+          Category: '',              // blank — belongs to the section above
+          Date: safeDate(t.date, 'MMM dd, yyyy'),
           Description: t.description,
           'Created By': t.created_by,
-          Allocated:   t.allocated,
-          Obligated:   t.obligated,
-          Balance:     t.balance,
-          Status:      status.label
+          Allocated: t.allocated,
+          Obligated: t.obligated,
+          Balance: t.balance,
+          Status: status.label
         })
       }
       txnRows.push({})  // blank separator
@@ -493,7 +498,7 @@ const Reports = () => {
               <BarChart data={previewData.data || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <YAxis tickFormatter={(v) => `₱${v/1000}K`} tick={{ fontSize: 11 }} />
+                <YAxis tickFormatter={(v) => `₱${v / 1000}K`} tick={{ fontSize: 11 }} />
                 <Tooltip formatter={(v) => formatCurrencyPH(v)} />
                 <Legend />
                 <Bar dataKey="allocated" fill="#0E3642" name="Allocated" />
@@ -528,11 +533,11 @@ const Reports = () => {
               <LineChart data={mockLineData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                <YAxis tickFormatter={(v) => `₱${v/1000}K`} tick={{ fontSize: 11 }} />
+                <YAxis tickFormatter={(v) => `₱${v / 1000}K`} tick={{ fontSize: 11 }} />
                 <Tooltip formatter={(v) => formatCurrencyPH(v)} />
                 <Legend />
                 <Line type="monotone" dataKey="budget" stroke="#0E3642" name="Budget" />
-                <Line type="monotone" dataKey="actual"  stroke="#EF4444" name="Actual" />
+                <Line type="monotone" dataKey="actual" stroke="#EF4444" name="Actual" />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -601,11 +606,10 @@ const Reports = () => {
               ) : (
                 generatedReports.map(report => (
                   <div key={report.id}
-                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                      previewData?.id === report.id
+                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${previewData?.id === report.id
                         ? 'border-primary bg-primary/5'
                         : 'border-gray-200 hover:bg-gray-50'
-                    }`}
+                      }`}
                     onClick={() => setPreviewData(report)}
                   >
                     <div className="flex items-start justify-between">
@@ -657,11 +661,10 @@ const Reports = () => {
               </button>
 
               {verificationResult && (
-                <div className={`p-3 rounded-lg border ${
-                  verificationResult.valid
+                <div className={`p-3 rounded-lg border ${verificationResult.valid
                     ? 'bg-success/10 border-success/30'
                     : 'bg-danger/10 border-danger/30'
-                }`}>
+                  }`}>
                   <div className="flex items-start gap-2">
                     {verificationResult.valid
                       ? <CheckCircleIcon className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
@@ -709,6 +712,11 @@ const Reports = () => {
                         Code: {previewData.verificationCode}
                       </p>
                     )}
+                    {previewData.isDeleted && (
+                      <p className="text-sm text-warning mt-2 font-medium">
+                        ⚠️ Original report has been deleted (verified via code)
+                      </p>
+                    )}
                   </div>
                   <div className="flex gap-2 shrink-0 print:hidden">
                     <button onClick={() => downloadPDF(previewData)} className="btn-secondary flex items-center gap-2" title="Download PDF">
@@ -720,6 +728,15 @@ const Reports = () => {
                     <button onClick={handlePrint} className="btn-secondary flex items-center gap-2" title="Print Report">
                       <PrinterIcon className="w-4 h-4" /> Print
                     </button>
+                    {!previewData.isDeleted && (isAdmin() || previewData.createdBy?.id === user?.id) && (
+                      <button
+                        onClick={() => deleteReport(previewData.id)}
+                        className="btn-danger flex items-center gap-2"
+                      >
+                        <TrashIcon className="w-4 h-4" />
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -789,7 +806,7 @@ const Reports = () => {
                         ) : (
                           (previewData.data || []).map((item, index) => {
                             const isExpanded = !!expandedCategories[index]
-                            const hasTxns    = (item.transactions?.length ?? 0) > 0
+                            const hasTxns = (item.transactions?.length ?? 0) > 0
                             const util = item.allocated
                               ? ((Number(item.obligated) || 0) / Number(item.allocated)) * 100
                               : 0
@@ -798,15 +815,14 @@ const Reports = () => {
                               <Fragment key={`cat-group-${item.id ?? index}`}>
                                 {/* ── Category summary row ────────────── */}
                                 <tr
-                                  className={`transition-colors ${
-                                    hasTxns ? 'cursor-pointer hover:bg-primary/[0.03]' : ''
-                                  } ${isExpanded ? 'bg-primary/[0.02]' : ''}`}
+                                  className={`transition-colors ${hasTxns ? 'cursor-pointer hover:bg-primary/[0.03]' : ''
+                                    } ${isExpanded ? 'bg-primary/[0.02]' : ''}`}
                                   onClick={() => hasTxns && toggleCategory(index)}
                                 >
                                   <td className="table-cell px-2 text-center print:hidden">
                                     {hasTxns ? (
                                       isExpanded
-                                        ? <ChevronDownIcon  className="w-3.5 h-3.5 text-primary mx-auto" />
+                                        ? <ChevronDownIcon className="w-3.5 h-3.5 text-primary mx-auto" />
                                         : <ChevronRightIcon className="w-3.5 h-3.5 text-text-light mx-auto" />
                                     ) : null}
                                   </td>
@@ -824,11 +840,10 @@ const Reports = () => {
                                     {formatCurrencyPH((Number(item.allocated) || 0) - (Number(item.obligated) || 0))}
                                   </td>
                                   <td className="table-cell text-right">
-                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs text-white ${
-                                      util < 25  ? 'bg-success'    :
-                                      util < 50  ? 'bg-warning'    :
-                                      util < 75  ? 'bg-orange-500' : 'bg-danger'
-                                    }`}>
+                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs text-white ${util < 25 ? 'bg-success' :
+                                        util < 50 ? 'bg-warning' :
+                                          util < 75 ? 'bg-orange-500' : 'bg-danger'
+                                      }`}>
                                       {util.toFixed(1)}%
                                     </span>
                                   </td>
@@ -840,7 +855,7 @@ const Reports = () => {
                                     {/* Sub-header */}
                                     <tr className="bg-primary/[0.04]">
                                       <td className="print:hidden" />
-                                      {['Date','Description','Created By','Allocated','Obligated','Balance','Status'].map(h => (
+                                      {['Date', 'Description', 'Created By', 'Allocated', 'Obligated', 'Balance', 'Status'].map(h => (
                                         <td key={h} className="px-3 sm:px-6 py-1.5 text-[10px] font-semibold text-text-light uppercase tracking-wider">
                                           {h}
                                         </td>
