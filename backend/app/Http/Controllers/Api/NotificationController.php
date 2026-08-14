@@ -84,6 +84,22 @@ class NotificationController extends Controller
         return response()->json(['message' => 'All notifications marked as read']);
     }
 
+    public function clearAll(Request $request)
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $query = Notification::query();
+
+        if ($user->role !== 'admin') {
+            $query->where('user_id', $user->id);
+        }
+
+        $query->delete();
+
+        return response()->json(['message' => 'All notifications cleared']);
+    }
+
     private function formatNotification(Notification $notification): array
     {
         $requestId = $notification->budgetRequest?->request_number;

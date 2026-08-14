@@ -20,4 +20,9 @@ export const notificationService = {
     const response = await api.post('/notifications/read-all')
     return response.data
   },
+
+  clearAll: async () => {
+    const response = await api.delete('/notifications')
+    return response.data
+  },
 }

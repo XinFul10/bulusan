@@ -61,6 +61,7 @@ Route::get('/notifications', [NotificationController::class, 'index'])->middlewa
 Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount'])->middleware('auth:sanctum');
 Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->middleware('auth:sanctum');
 Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->middleware('auth:sanctum');
+Route::delete('/notifications', [NotificationController::class, 'clearAll'])->middleware('auth:sanctum');
 
 Route::get('/system-logs', [SystemLogController::class, 'index'])->middleware('auth:sanctum');
 Route::get('/system-logs/{log}', [SystemLogController::class, 'show'])->middleware('auth:sanctum');
