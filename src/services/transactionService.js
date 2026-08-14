@@ -143,6 +143,11 @@ export const reportService = {
   delete: async (id) => {
     const response = await api.delete(`/reports/${id}`)
     return response.data
+  },
+
+  verify: async (verificationCode) => {
+    const response = await api.post('/reports/verify', { verification_code: verificationCode })
+    return response.data
   }
 }
 

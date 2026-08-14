@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Report;
+use App\Models\ReportVerification;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -62,6 +63,20 @@ class ReportController extends Controller
             ...$data,
             'data' => $reportData,
             'created_by' => $request->user()->id,
+        ]);
+
+        // Create verification record that persists even if report is deleted
+        ReportVerification::create([
+            'verification_code' => $report->verification_code,
+            'type' => $report->type,
+            'type_label' => $report->type_label,
+            'date_from' => $report->date_from,
+            'date_to' => $report->date_to,
+            'category' => $report->category,
+            'data' => $report->data,
+            'generated_at' => $report->created_at,
+            'created_by' => $request->user()->id,
+            'is_deleted' => false,
         ]);
 
         return response()->json([
@@ -138,8 +153,54 @@ class ReportController extends Controller
             abort(403, 'You can only delete your own reports.');
         }
         
+        // Mark verification record as deleted instead of removing it
+        $verification = ReportVerification::where('verification_code', $report->verification_code)->first();
+        if ($verification) {
+            $verification->is_deleted = true;
+            $verification->save();
+        }
+        
         $report->delete();
         
         return response()->json(['success' => true]);
+    }
+
+    // Verify report code (works even if report is deleted)
+    public function verify(Request $request)
+    {
+        $request->validate([
+            'verification_code' => ['required', 'string'],
+        ]);
+
+        $verification = ReportVerification::where('verification_code', $request->verification_code)->first();
+
+        if (!$verification) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'Invalid verification code',
+            ], 404);
+        }
+
+        return response()->json([
+            'valid' => true,
+            'message' => $verification->is_deleted 
+                ? 'Valid verification code (original report has been deleted)' 
+                : 'Valid verification code',
+            'data' => [
+                'type' => $verification->type,
+                'type_label' => $verification->type_label,
+                'date_from' => $verification->date_from?->toDateString(),
+                'date_to' => $verification->date_to?->toDateString(),
+                'category' => $verification->category,
+                'data' => $verification->data,
+                'generated_at' => $verification->generated_at->toIso8601String(),
+                'created_by' => [
+                    'id' => $verification->creator?->id,
+                    'full_name' => $verification->creator?->full_name,
+                ],
+                'verification_code' => $verification->verification_code,
+                'is_deleted' => $verification->is_deleted,
+            ],
+        ]);
     }
 }

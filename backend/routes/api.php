@@ -19,6 +19,7 @@ Route::get('/health', fn () => response()->json(['ok' => true]));
 Route::get('/reports', [ReportController::class, 'index'])->middleware('auth:sanctum');
 Route::post('/reports', [ReportController::class, 'store'])->middleware('auth:sanctum');
 Route::delete('/reports/{report}', [ReportController::class, 'destroy'])->middleware('auth:sanctum');
+Route::post('/reports/verify', [ReportController::class, 'verify'])->middleware('auth:sanctum');
 
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/auth/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');

@@ -231,6 +231,11 @@ const Reports = () => {
   }
 
   const deleteReport = async (id) => {
+    if (!id) {
+      toast.error('Cannot delete report - no ID available')
+      return
+    }
+    
     try {
       await reportService.delete(id)
       setGeneratedReports(prev => prev.filter(r => r.id !== id))
@@ -241,7 +246,7 @@ const Reports = () => {
     }
   }
 
-  const handleVerifyCode = () => {
+  const handleVerifyCode = async () => {
     setVerificationResult(null)
     
     if (!verificationCode.trim()) {
@@ -249,27 +254,47 @@ const Reports = () => {
       return
     }
 
-    const found = generatedReports.find(r => 
-      r.verificationCode === verificationCode
-    )
-
-    if (found) {
-      setVerificationResult({ 
-        valid: true, 
-        message: `Valid! Report: ${found.typeLabel} (${safeFormatDate(found.generatedAt, 'MMM dd, yyyy')})`,
-        report: found
-      })
-      // Auto-load the report
-      setPreviewData(found)
-    } else if (isValidReportCode(verificationCode)) {
-      setVerificationResult({ 
-        valid: false, 
-        message: 'Code format is valid, but no matching report found in this system' 
-      })
-    } else {
+    if (!isValidReportCode(verificationCode)) {
       setVerificationResult({ 
         valid: false, 
         message: 'Invalid code format. Use format: #XXXXXXXXXXXX (12 alphanumeric characters, case-sensitive)' 
+      })
+      return
+    }
+
+    try {
+      const response = await reportService.verify(verificationCode)
+      
+      if (response.valid) {
+        const verifiedReport = {
+          id: null, // No ID since it might be deleted
+          type: response.data.type,
+          typeLabel: response.data.type_label,
+          dateFrom: response.data.date_from,
+          dateTo: response.data.date_to,
+          category: response.data.category,
+          generatedAt: response.data.generated_at,
+          data: response.data.data,
+          createdBy: response.data.created_by,
+          verificationCode: response.data.verification_code,
+          isDeleted: response.data.is_deleted
+        }
+
+        setVerificationResult({ 
+          valid: true, 
+          message: response.data.is_deleted 
+            ? `Valid! Report: ${verifiedReport.typeLabel} (${safeFormatDate(verifiedReport.generatedAt, 'MMM dd, yyyy')}) - Original report was deleted`
+            : `Valid! Report: ${verifiedReport.typeLabel} (${safeFormatDate(verifiedReport.generatedAt, 'MMM dd, yyyy')})`,
+          report: verifiedReport
+        })
+        
+        // Auto-load the report for preview
+        setPreviewData(verifiedReport)
+      }
+    } catch (error) {
+      setVerificationResult({ 
+        valid: false, 
+        message: error.response?.data?.message || 'Verification failed. Code not found.' 
       })
     }
   }
@@ -547,6 +572,11 @@ const Reports = () => {
                         Code: {previewData.verificationCode}
                       </p>
                     )}
+                    {previewData.isDeleted && (
+                      <p className="text-sm text-warning mt-2 font-medium">
+                        ⚠️ Original report has been deleted (verified via code)
+                      </p>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -567,6 +597,15 @@ const Reports = () => {
                       <PrinterIcon className="w-4 h-4" />
                       Print
                     </button>
+                    {!previewData.isDeleted && (isAdmin() || previewData.createdBy?.id === user?.id) && (
+                      <button
+                        onClick={() => deleteReport(previewData.id)}
+                        className="btn-danger flex items-center gap-2"
+                      >
+                        <TrashIcon className="w-4 h-4" />
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </div>
 
