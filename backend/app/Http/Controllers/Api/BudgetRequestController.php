@@ -22,8 +22,6 @@ class BudgetRequestController extends Controller
 
     public function index(Request $request)
     {
-        $this->ensureSampleRequests($request->user());
-
         $query = BudgetRequest::query()
             ->with(['steps', 'creator:id,full_name'])
             ->orderByDesc('submitted_at');
@@ -228,56 +226,5 @@ class BudgetRequestController extends Controller
             || str_contains($normalizedDepartment, 'finance office')
             || str_contains($normalizedDepartment, "mayor's office")
             || str_contains($normalizedDepartment, 'mayor office');
-    }
-
-    private function ensureSampleRequests(User $user): void
-    {
-        if (BudgetRequest::query()->where('created_by', $user->id)->exists()) {
-            return;
-        }
-
-        $samples = [
-            [
-                'title' => 'IT Equipment Purchase',
-                'submitted_at' => now()->subDays(2),
-                'step_approvals' => ['Department Head', 'Budget Office'],
-            ],
-            [
-                'title' => 'Tourism Promotion Materials',
-                'submitted_at' => now()->subDay(),
-                'step_approvals' => ['Department Head'],
-            ],
-            [
-                'title' => 'Staff Training Workshop',
-                'submitted_at' => now(),
-                'step_approvals' => [],
-            ],
-        ];
-
-        foreach ($samples as $index => $sample) {
-            $requestNumber = sprintf('BR-%s-%03d-%d', now()->format('Y'), $index + 1, $user->id);
-
-            $budgetRequest = BudgetRequest::query()->create([
-                'request_number' => $requestNumber,
-                'title' => $sample['title'],
-                'status' => 'pending',
-                'created_by' => $user->id,
-                'submitted_at' => $sample['submitted_at'],
-            ]);
-
-            $this->workflow->createStepsForRequest($budgetRequest);
-
-            foreach ($sample['step_approvals'] as $stepName) {
-                $step = $budgetRequest->steps()->where('name', $stepName)->first();
-                if ($step) {
-                    $step->forceFill([
-                        'approved' => true,
-                        'approved_at' => now(),
-                    ])->save();
-                }
-            }
-
-            $this->workflow->refreshRequestMeta($budgetRequest->fresh('steps'));
-        }
     }
 }

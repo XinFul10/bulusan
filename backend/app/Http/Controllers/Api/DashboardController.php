@@ -19,9 +19,9 @@ class DashboardController extends Controller
             ->get();
 
         $categoryStats = $categories->filter(function (Category $c) {
-            return (int) $c->allocation > 0;
+            return (int) ($c->allocated ?? 0) > 0;
         })->map(function (Category $c) {
-            $allocation = (int) $c->allocation;
+            $allocation = (int) ($c->allocated ?? 0);
             $obligated = (int) ($c->obligated ?? 0);
             $balance = max(0, $allocation - $obligated);
             $percentage = $allocation > 0 ? round(($obligated / $allocation) * 100) : 0;
@@ -37,12 +37,12 @@ class DashboardController extends Controller
         })->values();
 
         $totalObligated = (int) Transaction::query()->sum('obligated_amount');
+        $totalAllocated = (int) Transaction::query()->sum('allocated_amount');
 
         $latestBudget = Budget::latest()->first();
-        $categoryTotal = (int) Category::query()->sum('allocation');
         $totalBudget = $latestBudget
             ? (float) $latestBudget->total_budget
-            : ($categoryTotal > 0 ? $categoryTotal : 0);
+            : $totalAllocated;
         
         $remainingBalance = max(0, $totalBudget - $totalObligated);
         $overallUtilization = $totalBudget > 0 ? round(($totalObligated / $totalBudget) * 100, 2) : 0;
