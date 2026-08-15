@@ -154,13 +154,126 @@ class BudgetRequestController extends Controller
         ]);
     }
 
+    public function adminApproveStage(Request $request, BudgetRequest $budgetRequest)
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        if (!$this->isPrivilegedRole($user)) {
+            return response()->json(['message' => 'Unauthorized — Admin or Head of Tourism only'], 403);
+        }
+
+        $freshRequest = $budgetRequest->fresh('steps');
+        $current = $this->workflow->currentApprovableStep($freshRequest);
+
+        if (!$current) {
+            return response()->json(['message' => 'No pending stage to approve — request may already be completed.'], 422);
+        }
+
+        $stepName = $current->name;
+
+        $current->forceFill([
+            'approved'    => true,
+            'approved_at' => now(),
+        ])->save();
+
+        $this->workflow->completeIfAllApproved($freshRequest->fresh('steps'));
+        $this->workflow->refreshRequestMeta($freshRequest->fresh('steps'));
+
+        $freshRequest = $budgetRequest->fresh(['steps', 'creator']);
+        $this->notifications->notifyStepApproved($freshRequest, $stepName);
+
+        SystemLog::log(
+            $user->id,
+            'ADMIN_APPROVE_STAGE',
+            'BudgetRequest',
+            "Admin override: {$user->full_name} approved stage '{$stepName}' on behalf of the department for request {$budgetRequest->request_number}",
+            $budgetRequest->id,
+            [
+                'step'           => $stepName,
+                'request_number' => $budgetRequest->request_number,
+                'override_by'    => $user->full_name,
+                'override_role'  => $user->role,
+            ],
+            $request
+        );
+
+        return response()->json([
+            'message' => "Stage '{$stepName}' approved successfully.",
+            'data'    => $this->workflow->formatRequest($freshRequest),
+        ]);
+    }
+
+    public function adminFastTrack(Request $request, BudgetRequest $budgetRequest)
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        if (!$this->isPrivilegedRole($user)) {
+            return response()->json(['message' => 'Unauthorized — Admin or Head of Tourism only'], 403);
+        }
+
+        if ($budgetRequest->status === 'rejected') {
+            return response()->json(['message' => 'Cannot fast-track a rejected request.'], 422);
+        }
+
+        $freshRequest = $budgetRequest->fresh('steps');
+
+        $pendingSteps = $freshRequest->steps->filter(
+            fn ($s) => !$s->approved && !in_array($s->name, ['Budget Requested'], true)
+        );
+
+        if ($pendingSteps->isEmpty()) {
+            return response()->json(['message' => 'Request is already fully completed.'], 422);
+        }
+
+        $bypassedNames = $pendingSteps
+            ->filter(fn ($s) => $s->name !== 'Completed')
+            ->pluck('name')
+            ->values()
+            ->all();
+
+        // Approve all pending steps at once
+        $pendingSteps->each(fn ($s) => $s->forceFill([
+            'approved'    => true,
+            'approved_at' => now(),
+        ])->save());
+
+        $this->workflow->refreshRequestMeta($budgetRequest->fresh('steps'));
+
+        SystemLog::log(
+            $user->id,
+            'ADMIN_FAST_TRACK',
+            'BudgetRequest',
+            "Admin fast-track: {$user->full_name} bypassed " . implode(', ', $bypassedNames) . " for request {$budgetRequest->request_number}",
+            $budgetRequest->id,
+            [
+                'bypassed_stages' => $bypassedNames,
+                'request_number'  => $budgetRequest->request_number,
+                'override_by'     => $user->full_name,
+                'override_role'   => $user->role,
+            ],
+            $request
+        );
+
+        return response()->json([
+            'message' => 'Request fast-tracked to Completed.',
+            'data'    => $this->workflow->formatRequest($budgetRequest->fresh(['steps', 'creator'])),
+        ]);
+    }
+
+    private function isPrivilegedRole(User $user): bool
+    {
+        return in_array($user->role, ['admin', 'head of tourism'], true);
+    }
+
     private function canApproveStep(User $user, BudgetRequestStep $step): bool
     {
         if (in_array($step->name, ['Budget Requested', 'Completed'], true)) {
             return false;
         }
 
-        if ($user->role === 'head of tourism') {
+        if ($this->isPrivilegedRole($user)) {
             return true;
         }
 
@@ -184,9 +297,9 @@ class BudgetRequestController extends Controller
 
         $aliases = [
             'department head' => ['department head', 'dept head', 'head of department'],
-            'budget office' => ['budget office', 'office of the budget'],
-            'finance office' => ['finance office', 'office of finance', 'finance'],
-            "mayor's office" => ["mayor's office", 'office of the mayor', 'mayors office', 'mayor office'],
+            'budget office'   => ['budget office', 'office of the budget'],
+            'finance office'  => ['finance office', 'office of finance', 'finance'],
+            "mayor's office"  => ["mayor's office", 'office of the mayor', 'mayors office', 'mayor office'],
         ];
 
         foreach ($aliases as $canonical => $values) {
@@ -203,7 +316,7 @@ class BudgetRequestController extends Controller
 
     private function canViewAllRequests(User $user): bool
     {
-        if ($user->role === 'admin' || $user->role === 'head of tourism') {
+        if ($this->isPrivilegedRole($user)) {
             return true;
         }
 
@@ -216,7 +329,7 @@ class BudgetRequestController extends Controller
             'mayors office',
         ];
 
-        $normalizedRole = strtolower(str_replace(['_', '-'], ' ', (string) $user->role));
+        $normalizedRole       = strtolower(str_replace(['_', '-'], ' ', (string) $user->role));
         $normalizedDepartment = strtolower(str_replace(['_', '-'], ' ', (string) $user->department));
 
         return in_array($normalizedRole, $approvedDepartments, true)

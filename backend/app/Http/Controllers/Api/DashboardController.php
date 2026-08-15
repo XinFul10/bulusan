@@ -13,15 +13,22 @@ class DashboardController extends Controller
     public function stats()
     {
         $categories = Category::query()
-            ->withSum('transactions as obligated', 'obligated_amount')
-            ->withSum('transactions as allocated', 'allocated_amount')
+            ->withSum(['transactions as obligated' => fn ($q) => $q->where('is_visible_in_transactions', true)], 'obligated_amount')
+            ->withSum(['transactions as allocated' => fn ($q) => $q->where('is_visible_in_transactions', true)], 'allocated_amount')
             ->orderBy('id')
             ->get();
 
         $categoryStats = $categories->filter(function (Category $c) {
-            return (int) ($c->allocated ?? 0) > 0;
+            $baseAllocation = (int) ($c->allocation ?? 0);
+            $txnAllocated = (int) ($c->allocated ?? 0);
+            $txnObligated = (int) ($c->obligated ?? 0);
+
+            // Include predefined categories with budget OR custom categories that have active transactions
+            return $baseAllocation > 0 || $txnAllocated > 0 || $txnObligated > 0;
         })->map(function (Category $c) {
-            $allocation = (int) ($c->allocated ?? 0);
+            $baseAllocation = (int) ($c->allocation ?? 0);
+            $txnAllocated = (int) ($c->allocated ?? 0);
+            $allocation = $baseAllocation > 0 ? $baseAllocation : $txnAllocated;
             $obligated = (int) ($c->obligated ?? 0);
             $balance = max(0, $allocation - $obligated);
             $percentage = $allocation > 0 ? round(($obligated / $allocation) * 100) : 0;
@@ -36,18 +43,25 @@ class DashboardController extends Controller
             ];
         })->values();
 
-        $totalObligated = (int) Transaction::query()->sum('obligated_amount');
-        $totalAllocated = (int) Transaction::query()->sum('allocated_amount');
+        $totalObligated = (int) Transaction::query()->where('is_visible_in_transactions', true)->sum('obligated_amount');
+        $totalAllocated = (int) Transaction::query()->where('is_visible_in_transactions', true)->sum('allocated_amount');
 
         $latestBudget = Budget::latest()->first();
+        $predefinedTotal = (int) Category::query()->where('allocation', '>', 0)->sum('allocation');
+        $customAllocated = (int) Transaction::query()
+            ->where('is_visible_in_transactions', true)
+            ->whereHas('category', fn ($q) => $q->where('allocation', 0))
+            ->sum('allocated_amount');
+
         $totalBudget = $latestBudget
             ? (float) $latestBudget->total_budget
-            : $totalAllocated;
+            : ($predefinedTotal + $customAllocated);
         
         $remainingBalance = max(0, $totalBudget - $totalObligated);
         $overallUtilization = $totalBudget > 0 ? round(($totalObligated / $totalBudget) * 100, 2) : 0;
 
         $recentTransactions = Transaction::query()
+            ->where('is_visible_in_transactions', true)
             ->with(['creator:id,full_name', 'category:id,name'])
             ->orderByDesc('transaction_date')
             ->orderByDesc('id')
@@ -78,4 +92,3 @@ class DashboardController extends Controller
         ]);
     }
 }
-

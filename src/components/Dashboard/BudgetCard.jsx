@@ -12,7 +12,7 @@ const BudgetCard = ({ category, allocation, obligated, balance, percentage }) =>
       currency: 'PHP',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
-    }).format(amount)
+    }).format(amount || 0)
   }
 
   const stats = [
@@ -22,33 +22,45 @@ const BudgetCard = ({ category, allocation, obligated, balance, percentage }) =>
   ]
 
   return (
-    <div className="card p-4 sm:p-6 hover:shadow-card-hover transition-shadow duration-200">
-      <h3 className="text-base sm:text-lg font-semibold text-text-dark mb-3 sm:mb-4 leading-snug">{category}</h3>
+    <div className="card p-4 sm:p-5 hover:shadow-card-hover transition-shadow duration-200 flex flex-col justify-between">
+      <div>
+        <h3 className="text-sm sm:text-base font-bold text-text-dark mb-3 leading-snug truncate" title={category}>
+          {category}
+        </h3>
 
-      {/* Mobile: stacked rows; tablet+: 3-column grid */}
-      <div className="space-y-3 sm:space-y-0 sm:grid sm:grid-cols-3 sm:gap-4 mb-4">
-        {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="flex flex-col sm:block gap-1 border-b border-gray-100 sm:border-0 pb-3 sm:pb-0 last:border-0 last:pb-0"
-          >
-            <p className="text-xs sm:text-xs text-text-light uppercase tracking-wider">{stat.label}</p>
-            <div className="sm:text-left">
-              <p className={`text-base sm:text-lg font-bold ${stat.color} break-words min-w-0`}>{stat.value}</p>
-              {stat.sub && <p className="text-xs text-text-light">{stat.sub}</p>}
+        {/* 3-column stats with nowrap & responsive font scaling to prevent number collisions */}
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-2 mb-3">
+          {stats.map((stat) => (
+            <div
+              key={stat.label}
+              className="flex flex-col min-w-0"
+            >
+              <p className="text-[10px] sm:text-[11px] font-semibold text-text-light uppercase tracking-wider truncate" title={stat.label}>
+                {stat.label}
+              </p>
+              <div className="mt-0.5 min-w-0">
+                <p className={`text-xs sm:text-sm xl:text-[13px] 2xl:text-sm font-bold ${stat.color} whitespace-nowrap truncate`} title={stat.value}>
+                  {stat.value}
+                </p>
+                {stat.sub && (
+                  <p className="text-[10px] sm:text-xs text-text-light whitespace-nowrap">
+                    {stat.sub}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
-      <div className="mt-2 sm:mt-4">
-        <div className="h-2.5 sm:h-2 bg-gray-200 rounded-full overflow-hidden">
+      <div className="mt-2 pt-2 border-t border-gray-100">
+        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
           <div
             className={`h-full ${getProgressColor(percentage)} transition-all duration-500`}
             style={{ width: `${Math.min(percentage, 100)}%` }}
           />
         </div>
-        <p className="text-xs text-text-light mt-1.5 text-right">{percentage}% utilized</p>
+        <p className="text-[11px] text-text-light mt-1.5 text-right font-medium">{percentage}% utilized</p>
       </div>
     </div>
   )

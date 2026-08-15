@@ -3,7 +3,7 @@ import { useMediaQuery, shortenCategoryName } from '../../utils/useMediaQuery'
 
 const BudgetPieChart = ({ data }) => {
   const isMobile = useMediaQuery('(max-width: 767px)')
-  const COLORS = ['#0E3642', '#22626B', '#10B981', '#F59E0B']
+  const COLORS = ['#0E3642', '#22626B', '#10B981', '#F59E0B', '#6366F1', '#EC4899', '#14B8A6', '#F97316', '#8B5CF6', '#EF4444']
 
   const chartData = data?.map(item => ({
     name: item.name,

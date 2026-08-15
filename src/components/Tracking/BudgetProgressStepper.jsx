@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { CheckCircleIcon } from '@heroicons/react/24/solid'
+import { CheckCircleIcon, BoltIcon, ChevronRightIcon } from '@heroicons/react/24/solid'
+import { ShieldCheckIcon } from '@heroicons/react/24/outline'
 
 const TERMINAL_STEPS = new Set(['Budget Requested', 'Completed'])
 
@@ -23,8 +24,20 @@ const BudgetProgressStepper = ({
   approving = false,
   approveLabel = 'Approve',
   className = '',
+  // Admin override props
+  isPrivileged = false,
+  requestIsActive = false,
+  onAdminApproveStage,
+  onAdminFastTrack,
+  adminActing = false,
+  pendingStageNames = [],
 }) => {
   const activeIndex = useMemo(() => getActiveStepIndex(departments), [departments])
+
+  const isCompleted = useMemo(() =>
+    departments.length > 0 && departments.every(s => s.approved),
+    [departments]
+  )
 
   if (!departments.length) {
     return (
@@ -118,6 +131,7 @@ const BudgetProgressStepper = ({
         </ol>
       </div>
 
+      {/* Normal department approve button */}
       {canApprove && onApprove && (
         <div className="mt-6 flex justify-center">
           <button
@@ -128,6 +142,50 @@ const BudgetProgressStepper = ({
           >
             {approving ? 'Approving…' : approveLabel}
           </button>
+        </div>
+      )}
+
+      {/* Admin / Head of Tourism override panel */}
+      {isPrivileged && requestIsActive && (
+        <div className="mt-6 border-t border-dashed border-gray-300 pt-5">
+          <div className="flex items-center gap-2 mb-3">
+            <ShieldCheckIcon className="w-4 h-4 text-primary shrink-0" />
+            <span className="text-xs font-bold text-primary uppercase tracking-wider">
+              Override Controls
+            </span>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            {/* Approve This Stage */}
+            <button
+              id="btn-admin-approve-stage"
+              type="button"
+              disabled={adminActing || isCompleted}
+              onClick={onAdminApproveStage}
+              className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-primary text-primary text-sm font-semibold hover:bg-primary hover:text-white active:bg-primary-dark active:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-200"
+            >
+              <ChevronRightIcon className="w-4 h-4" />
+              {adminActing ? 'Processing…' : 'Approve This Stage'}
+            </button>
+
+            {/* Fast-Track to Completed */}
+            <button
+              id="btn-admin-fast-track"
+              type="button"
+              disabled={adminActing || isCompleted}
+              onClick={onAdminFastTrack}
+              className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-warning text-white text-sm font-semibold hover:bg-amber-600 active:bg-amber-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-200"
+            >
+              <BoltIcon className="w-4 h-4" />
+              {adminActing ? 'Processing…' : 'Fast-Track to Completed'}
+            </button>
+          </div>
+
+          {isCompleted && (
+            <p className="mt-2 text-xs text-success font-medium">
+              ✓ This request has been fully completed.
+            </p>
+          )}
         </div>
       )}
 

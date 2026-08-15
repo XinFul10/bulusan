@@ -93,6 +93,20 @@ export const requestService = {
     )
     return response.data
   },
+
+  adminApproveStage: async (requestId) => {
+    const response = await api.post(
+      `/budget/requests/${encodeURIComponent(requestId)}/admin/approve-stage`
+    )
+    return response.data
+  },
+
+  adminFastTrack: async (requestId) => {
+    const response = await api.post(
+      `/budget/requests/${encodeURIComponent(requestId)}/admin/fast-track`
+    )
+    return response.data
+  },
 }
 
 export const userService = {

@@ -61,6 +61,8 @@ Route::get('/budget/requests', [BudgetRequestController::class, 'index'])->middl
 Route::post('/budget/requests/{budgetRequest}/steps/{budgetRequestStep}/approve', [BudgetRequestController::class, 'approveStep'])->middleware('auth:sanctum');
 Route::get('/budget/requests/{budgetRequest}', [BudgetRequestController::class, 'show'])->middleware('auth:sanctum');
 Route::post('/budget/requests/{budgetRequest}/steps/{budgetRequestStep}/reject', [BudgetRequestController::class, 'rejectStep'])->middleware('auth:sanctum');
+Route::post('/budget/requests/{budgetRequest}/admin/approve-stage', [BudgetRequestController::class, 'adminApproveStage'])->middleware('auth:sanctum');
+Route::post('/budget/requests/{budgetRequest}/admin/fast-track', [BudgetRequestController::class, 'adminFastTrack'])->middleware('auth:sanctum');
 
 Route::get('/notifications', [NotificationController::class, 'index'])->middleware('auth:sanctum');
 Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount'])->middleware('auth:sanctum');

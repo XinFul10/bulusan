@@ -161,27 +161,36 @@ class TransactionController extends Controller
 
         $this->ensureWithinBudget($data);
 
-        $nextNumber = BudgetRequest::query()
-            ->whereYear('submitted_at', now()->year)
-            ->count() + 1;
+        $user = $request->user();
+        $isAutoApproved = in_array($user->role, ['admin', 'head of tourism'], true);
 
         $budgetRequest = BudgetRequest::query()->create([
-            'request_number' => sprintf('BR-%s-%03d-%d', now()->format('Y'), $nextNumber, $request->user()->id),
+            'request_number' => BudgetRequest::generateUniqueRequestNumber($user->id),
             'title' => $data['description'],
-            'status' => 'pending',
-            'created_by' => $request->user()->id,
+            'status' => $isAutoApproved ? 'completed' : 'pending',
+            'created_by' => $user->id,
             'submitted_at' => now(),
         ]);
 
         $this->workflow->createStepsForRequest($budgetRequest);
 
+        if ($isAutoApproved) {
+            $budgetRequest->steps()->update([
+                'approved' => true,
+                'approved_at' => now(),
+            ]);
+            // Reload steps and re-derive status so refreshRequestMeta sees all steps approved
+            $this->workflow->refreshRequestMeta($budgetRequest->fresh('steps'));
+        }
+
         $this->notifications->notifyNewSubmission($budgetRequest->fresh('creator'));
 
         $transaction = Transaction::create([
             ...$data,
-            'created_by' => $request->user()->id,
+            'created_by' => $user->id,
             'budget_request_id' => $budgetRequest->id,
-            'is_visible_in_transactions' => false,
+            // For auto-approved users the workflow already set visibility; set it explicitly here too
+            'is_visible_in_transactions' => $isAutoApproved,
         ]);
 
         // If an initial obligated amount was provided, record it as an obligation entry
@@ -367,7 +376,16 @@ class TransactionController extends Controller
             $request
         );
 
+        $categoryId = $transaction->category_id;
         $transaction->delete();
+
+        // If category is a custom category (allocation = 0) and has no remaining transactions, delete it
+        if ($categoryId) {
+            $category = Category::find($categoryId);
+            if ($category && (int) $category->allocation === 0 && Transaction::where('category_id', $categoryId)->count() === 0) {
+                $category->delete();
+            }
+        }
 
         return response()->json(['success' => true]);
     }

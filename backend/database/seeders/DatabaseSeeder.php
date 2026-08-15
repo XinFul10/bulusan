@@ -109,55 +109,69 @@ class DatabaseSeeder extends Seeder
             Category::query()->firstOrCreate(['name' => $cat['name']], $cat);
         }
 
-        if (Transaction::query()->count() === 0) {
-            $capDev = Category::query()->where('name', 'Capacity Development')->firstOrFail();
-            $socio = Category::query()->where('name', 'Socio-Cultural & Eco')->firstOrFail();
-            $promo = Category::query()->where('name', 'TM & Promotions')->firstOrFail();
-
-            Transaction::query()->create([
-                'transaction_date' => '2026-01-15',
-                'description' => 'Training Workshop - Digital Marketing',
-                'category_id' => $capDev->id,
-                'allocated_amount' => 50000,
-                'obligated_amount' => 25000,
-                'created_by' => $admin->id,
-            ]);
-
-            Transaction::query()->create([
-                'transaction_date' => '2026-01-20',
-                'description' => 'Eco-Tourism Site Development',
-                'category_id' => $socio->id,
-                'allocated_amount' => 200000,
-                'obligated_amount' => 150000,
-                'created_by' => $admin->id,
-            ]);
-
-            Transaction::query()->create([
-                'transaction_date' => '2026-02-01',
-                'description' => 'Promotional Materials Printing',
-                'category_id' => $promo->id,
-                'allocated_amount' => 30000,
-                'obligated_amount' => 30000,
-                'created_by' => $admin->id,
+        // Initialize default annual budget if not set
+        if (\App\Models\Budget::query()->count() === 0) {
+            \App\Models\Budget::query()->create([
+                'total_budget' => 5400000,
+                'set_by' => $admin->id,
             ]);
         }
 
-        if (Document::query()->count() === 0) {
-            Document::query()->create([
-                'uploader_name' => 'Maria Santos',
-                'description' => 'Signed budget endorsement letter (Q1)',
-                'destination' => 'Office of the Mayor',
-                'manually_delivered' => false,
-                'created_by' => $admin->id,
-            ]);
+        // Demo transactions & mock documents are only seeded in development/local/testing environments, NEVER in production
+        if (! app()->environment('production')) {
+            if (Transaction::query()->count() === 0) {
+                $capDev = Category::query()->where('name', 'Capacity Development')->firstOrFail();
+                $socio = Category::query()->where('name', 'Socio-Cultural & Eco')->firstOrFail();
+                $promo = Category::query()->where('name', 'TM & Promotions')->firstOrFail();
 
-            Document::query()->create([
-                'uploader_name' => 'Juan Dela Cruz',
-                'description' => 'HR clearance & appointment papers',
-                'destination' => 'HR',
-                'manually_delivered' => true,
-                'created_by' => $admin->id,
-            ]);
+                Transaction::query()->create([
+                    'transaction_date' => '2026-01-15',
+                    'description' => 'Training Workshop - Digital Marketing',
+                    'category_id' => $capDev->id,
+                    'allocated_amount' => 50000,
+                    'obligated_amount' => 25000,
+                    'created_by' => $admin->id,
+                    'is_visible_in_transactions' => true,
+                ]);
+
+                Transaction::query()->create([
+                    'transaction_date' => '2026-01-20',
+                    'description' => 'Eco-Tourism Site Development',
+                    'category_id' => $socio->id,
+                    'allocated_amount' => 200000,
+                    'obligated_amount' => 150000,
+                    'created_by' => $admin->id,
+                    'is_visible_in_transactions' => true,
+                ]);
+
+                Transaction::query()->create([
+                    'transaction_date' => '2026-02-01',
+                    'description' => 'Promotional Materials Printing',
+                    'category_id' => $promo->id,
+                    'allocated_amount' => 30000,
+                    'obligated_amount' => 30000,
+                    'created_by' => $admin->id,
+                    'is_visible_in_transactions' => true,
+                ]);
+            }
+
+            if (Document::query()->count() === 0) {
+                Document::query()->create([
+                    'uploader_name' => 'Maria Santos',
+                    'description' => 'Signed budget endorsement letter (Q1)',
+                    'destination' => 'Office of the Mayor',
+                    'manually_delivered' => false,
+                    'created_by' => $admin->id,
+                ]);
+
+                Document::query()->create([
+                    'uploader_name' => 'Juan Dela Cruz',
+                    'description' => 'HR clearance & appointment papers',
+                    'destination' => 'HR',
+                    'manually_delivered' => true,
+                    'created_by' => $admin->id,
+                ]);
+            }
         }
     }
 }

@@ -37,4 +37,21 @@ class BudgetRequest extends Model
     {
         return 'request_number';
     }
+
+    public static function generateUniqueRequestNumber(int $userId): string
+    {
+        $year = now()->format('Y');
+        $maxId = (int) (static::query()->max('id') ?? 0) + 1;
+        $counter = $maxId;
+
+        do {
+            $candidate = sprintf('BR-%s-%03d-%d', $year, $counter, $userId);
+            $exists = static::query()->where('request_number', $candidate)->exists();
+            if ($exists) {
+                $counter++;
+            }
+        } while ($exists);
+
+        return $candidate;
+    }
 }

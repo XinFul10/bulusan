@@ -108,8 +108,8 @@ const Dashboard = () => {
     )
   }
 
-  // Filter categories with actual data (allocation > 0)
-  const categoriesWithData = stats?.categories?.filter(cat => cat.allocation > 0) || []
+  // Filter categories with actual data (allocation > 0 or obligated > 0)
+  const categoriesWithData = stats?.categories?.filter(cat => cat.allocation > 0 || cat.obligated > 0) || []
   const hasData = categoriesWithData.length > 0
 
   return (
