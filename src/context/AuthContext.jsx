@@ -92,6 +92,8 @@ export const AuthProvider = ({ children }) => {
 
   const isHeadOfTourism = () => user?.role === 'head of tourism'
 
+  const canSetBudget = () => user?.role === 'admin' || user?.role === 'head of tourism'
+
   const value = {
     user,
     setUser,
@@ -99,6 +101,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     isAdmin,
     isHeadOfTourism,
+    canSetBudget,
     loading
   }
 

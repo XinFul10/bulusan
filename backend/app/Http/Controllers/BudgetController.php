@@ -11,7 +11,7 @@ class BudgetController extends Controller
     public function setBudget(Request $request)
     {
         $user = Auth::user();
-        if ($user->role !== 'head of tourism') {
+        if (!in_array($user->role, ['head of tourism', 'admin'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 

@@ -15,6 +15,7 @@ import { format } from 'date-fns'
 import AddTransactionModal from '../components/Transactions/AddTransactionModal'
 import DeleteTransactionModal from '../components/Transactions/DeleteTransactionModal'
 import ObligationHistoryModal from '../components/Transactions/ObligationHistoryModal'
+import SetBudgetModal from '../components/Dashboard/SetBudgetModal'
 import { transactionService } from '../services/transactionService'
 import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'
@@ -54,7 +55,8 @@ const Transactions = () => {
   const [isDeleting, setIsDeleting] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
-  const { user, isAdmin } = useAuth()
+  const [showBudgetModal, setShowBudgetModal] = useState(false)
+  const { user, isAdmin, canSetBudget } = useAuth()
   
   // Filters
   const [searchTerm, setSearchTerm] = useState('')
@@ -251,16 +253,26 @@ const Transactions = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-xl sm:text-2xl font-bold text-text-dark">Transactions</h1>
-        <button
-          onClick={() => {
-            setEditData(null)
-            setIsModalOpen(true)
-          }}
-          className="btn-primary flex items-center justify-center gap-2 min-h-[44px] w-full sm:w-auto"
-        >
-          <PlusIcon className="w-5 h-5" />
-          New Transaction
-        </button>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {canSetBudget() && (
+            <button
+              onClick={() => setShowBudgetModal(true)}
+              className="btn-secondary flex items-center justify-center gap-2 min-h-[44px] flex-1 sm:flex-initial"
+            >
+              Set Budget
+            </button>
+          )}
+          <button
+            onClick={() => {
+              setEditData(null)
+              setIsModalOpen(true)
+            }}
+            className="btn-primary flex items-center justify-center gap-2 min-h-[44px] flex-1 sm:flex-initial"
+          >
+            <PlusIcon className="w-5 h-5" />
+            New Transaction
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -522,6 +534,15 @@ const Transactions = () => {
         isOpen={Boolean(historyTarget)}
         onClose={() => setHistoryTarget(null)}
         transaction={historyTarget}
+      />
+
+      {/* Set Budget Modal */}
+      <SetBudgetModal
+        isOpen={showBudgetModal}
+        onClose={() => setShowBudgetModal(false)}
+        onSuccess={() => {
+          window.dispatchEvent(new Event('refreshData'))
+        }}
       />
     </div>
   )
